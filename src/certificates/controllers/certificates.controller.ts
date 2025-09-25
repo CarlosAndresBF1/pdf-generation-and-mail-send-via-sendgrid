@@ -9,17 +9,27 @@ import {
   UseGuards,
   ParseIntPipe,
   Put,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { CertificatesService } from '../services/certificates.service';
+import { DesignImageService } from '../services/design-image.service';
 import { CreateCertificateDto } from '../dto/create-certificate.dto';
 import { UpdateCertificateDto } from '../dto/update-certificate.dto';
+import {
+  UploadDesignImageDto,
+  UploadDesignImageResponseDto,
+} from '../dto/upload-design-image.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 @ApiTags('Certificates')
@@ -27,7 +37,10 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('jwt-auth')
 export class CertificatesController {
-  constructor(private readonly certificatesService: CertificatesService) {}
+  constructor(
+    private readonly certificatesService: CertificatesService,
+    private readonly designImageService: DesignImageService,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -143,6 +156,59 @@ export class CertificatesController {
   })
   toggleActive(@Param('id', ParseIntPipe) id: number) {
     return this.certificatesService.toggleActive(id);
+  }
+
+  @Post('upload-design')
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiOperation({
+    summary: 'Upload certificate design image',
+    description:
+      'Uploads an image file to S3 for use as certificate background design',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Image file upload with metadata',
+    schema: {
+      type: 'object',
+      properties: {
+        image: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image file (JPEG, PNG, WebP, SVG)',
+        },
+        name: {
+          type: 'string',
+          description: 'Nombre descriptivo para la imagen',
+          example: 'Summit 2025 - Diseño Principal',
+        },
+        description: {
+          type: 'string',
+          description: 'Descripción adicional de la imagen',
+          example: 'Diseño base para certificados del Summit 2025',
+        },
+        client: {
+          type: 'string',
+          description: 'Cliente al que pertenece el diseño',
+          example: 'Nestlé',
+        },
+      },
+      required: ['image', 'name'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Image uploaded successfully',
+    type: UploadDesignImageResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - invalid file or validation errors',
+  })
+  async uploadDesignImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() uploadData: UploadDesignImageDto,
+  ): Promise<UploadDesignImageResponseDto> {
+    return this.designImageService.uploadDesignImage(file, uploadData);
   }
 
   @Delete(':id')

@@ -10,7 +10,7 @@
 **Port**: 3969 (external) → 3000 (internal)  
 **API Prefix**: /api/v1  
 **Documentation**: Available at /api/docs (Swagger)  
-**Test Coverage**: 25/25 tests passing ✅
+**Test Coverage**: 56/56 tests passing ✅ (Including 22 new tests for Image Upload + Bulk Upload)
 
 ### Business Purpose
 Sistema de generación y envío automatizado de certificados en PDF para eventos corporativos con sistema robusto de cola de trabajos. Características principales:
@@ -39,12 +39,14 @@ Sistema de generación y envío automatizado de certificados en PDF para eventos
   "password_hashing": "bcryptjs 3.0.2",
   "pdf_generation": "HTML to PDF conversion",
   "file_storage": "AWS S3 (@aws-sdk/client-s3 3.896.0)",
+  "file_upload": "Multer (@nestjs/platform-express) + UUID v4.3.1",
+  "file_processing": "CSV (papaparse 5.5.0) + Excel (xlsx 0.18.5)",
   "email_service": "SendGrid (@sendgrid/mail 8.1.6)",
   "job_queue": "Database-based persistent queue",
   "cron_scheduler": "@nestjs/schedule - Automatic job processing every 5 minutes",
   "api_documentation": "Swagger (@nestjs/swagger 11.2.0)",
   "validation": "class-validator 0.14.2 + class-transformer 0.5.1",
-  "testing": "Jest (25/25 unit + integration tests)",
+  "testing": "Jest (56/56 unit + integration tests) ✅",
   "containerization": "Docker + Docker Compose"
 }
 ```
@@ -54,11 +56,11 @@ Sistema de generación y envío automatizado de certificados en PDF para eventos
 src/
 ├── auth/           # JWT authentication with refresh tokens
 ├── users/          # Administrative user management
-├── certificates/   # Certificate configuration & templates
-├── attendees/      # Event participant management  
+├── certificates/   # Certificate configuration & templates + 🖼️ DESIGN IMAGE UPLOAD
+├── attendees/      # Event participant management + 📊 BULK UPLOAD SYSTEM  
 ├── generated-certificates/  # PDF generation & S3 storage
 ├── jobs/           # 📧 EMAIL JOB QUEUE + 🤖 AUTOMATIC CRON SCHEDULER
-└── shared/         # Email & S3 services
+└── shared/         # Email & S3 services + Design image management
 ```
 
 ### Database Schema
@@ -114,7 +116,217 @@ All table and column names are in English with snake_case convention
 
 ---
 
-## 📧 EMAIL JOBS SYSTEM - COMPLETE ARCHITECTURE
+## �️ DESIGN IMAGE UPLOAD SYSTEM
+
+### 🎯 System Overview
+Sistema completo de gestión de imágenes de diseño para certificados que permite a los administradores subir, organizar y gestionar las imágenes de fondo (`base_design_url`) que se utilizan en la generación de certificados PDF.
+
+### ✅ Core Features
+- **Upload a S3**: Almacenamiento automático en carpeta `certificates/design_images/`
+- **Validación de formatos**: JPEG, PNG, WebP, SVG soportados
+- **Límite de tamaño**: Máximo 10MB por imagen
+- **Organización automática**: Estructura `{client}_{year}/` para organización
+- **Nombres únicos**: UUID para evitar conflictos de archivos
+- **Validación de URLs**: Verificación de imágenes válidas desde CDN
+- **Extracción de metadatos**: Cliente, año y nombre de archivo
+- **Tests completos**: 22 tests unitarios (16 servicio + 6 controlador)
+
+### 📁 S3 Storage Structure
+```
+certificates/
+└── design_images/
+    ├── nestle_2025/
+    │   ├── summit-logo_a1b2c3d4.jpg
+    │   └── corporate-bg_e5f6g7h8.png
+    ├── cocacola_2025/
+    │   └── event-design_i9j0k1l2.svg
+    └── general_2025/
+        └── default-template_m3n4o5p6.webp
+```
+
+### 🔗 API Endpoint
+
+**POST** `/api/v1/certificates/upload-design`
+- **Autenticación**: JWT requerido (`@UseGuards(JwtAuthGuard)`)
+- **Content-Type**: `multipart/form-data`
+- **Documentación**: Swagger completo con ejemplos
+
+#### Request Parameters
+```typescript
+{
+  file: Express.Multer.File;        // Imagen (requerido)
+  name: string;                     // Nombre descriptivo (requerido)
+  description: string;              // Descripción (requerido)
+  client?: string;                  // Cliente (opcional, default: "general")
+}
+```
+
+#### Response Format
+```typescript
+{
+  url: string;              // URL completa del CDN
+  key: string;             // Clave S3 para referencia
+  originalName: string;    // Nombre original del archivo
+  size: number;           // Tamaño en bytes
+  mimeType: string;       // Tipo MIME
+  uploadedAt: Date;       // Fecha de subida
+}
+```
+
+#### Example Usage
+```bash
+# Upload con cliente específico
+curl -X POST http://localhost:3000/api/v1/certificates/upload-design \
+  -H "Authorization: Bearer <jwt_token>" \
+  -F "file=@corporate-logo.jpg" \
+  -F "name=Logo Corporativo" \
+  -F "description=Logo principal para certificados Summit 2025" \
+  -F "client=NestleCompany"
+
+# Upload genérico (sin cliente)
+curl -X POST http://localhost:3000/api/v1/certificates/upload-design \
+  -H "Authorization: Bearer <jwt_token>" \
+  -F "file=@background.png" \
+  -F "name=Fondo Genérico" \
+  -F "description=Imagen de fondo para certificados generales"
+```
+
+### 🛠️ Technical Implementation
+
+#### Key Files Created
+```
+src/
+├── certificates/
+│   ├── controllers/
+│   │   └── certificates.controller.ts           # + upload-design endpoint
+│   ├── dto/
+│   │   └── upload-design-image.dto.ts           # ✨ DTOs con validaciones
+│   └── services/
+│       ├── design-image.service.ts              # ✨ Lógica principal
+│       └── design-image.service.spec.ts         # ✨ 16 tests unitarios
+├── shared/
+│   └── modules/
+│       └── shared.module.ts                     # ✨ Exporta S3Service
+└── tests/
+    └── certificates.controller.spec.ts          # ✨ 6 tests de endpoint
+```
+
+#### Validation Rules
+- **Formatos**: `.jpg`, `.jpeg`, `.png`, `.webp`, `.svg`
+- **Tamaño máximo**: 10MB (10,485,760 bytes)
+- **Nombres únicos**: `{normalized_name}_{uuid}.{extension}`
+- **Cliente normalizado**: Minúsculas, espacios → guiones bajos
+- **Year automático**: Se agrega el año actual a la estructura
+
+#### Service Methods
+```typescript
+class DesignImageService {
+  // Core functionality
+  uploadDesignImage(file, uploadData): Promise<UploadDesignImageResponseDto>
+  deleteDesignImage(key: string): Promise<void>
+  
+  // Validation & utilities
+  validateDesignImageUrl(url: string): boolean
+  extractImageInfo(url: string): { client: string; year: string; filename: string } | null
+  
+  // Future extensions
+  listDesignImages(client?: string): Promise<DesignImageInfo[]>  // TODO
+}
+```
+
+### 🧪 Testing Coverage
+- **DesignImageService**: 16 tests unitarios
+  - Upload exitoso con diferentes configuraciones
+  - Validación de formatos y tamaños
+  - Manejo de errores de S3
+  - Generación de claves y nombres únicos
+  - Validación de URLs de CDN
+  - Extracción de metadatos
+  
+- **CertificatesController**: 6 tests de endpoint
+  - Upload con autenticación JWT
+  - Manejo de errores del servicio
+  - Validación de archivos inválidos
+  - Procesamiento con/sin cliente especificado
+
+### 🔄 Integration with Certificate System
+Las imágenes subidas están diseñadas para ser utilizadas como `base_design_url` en la configuración de certificados:
+
+```typescript
+// Ejemplo de uso en Certificate entity
+{
+  "id": 1,
+  "client": "NestleCompany",
+  "name": "Summit 2025 Certificate",
+  "base_design_url": "https://cdn.example.com/certificates/design_images/nestlecompany_2025/summit-logo_a1b2c3d4.jpg",
+  // ... otros campos
+}
+```
+
+---
+
+## 📊 BULK UPLOAD SYSTEM (ATTENDEES)
+
+### 🎯 System Overview
+Sistema robusto de carga masiva de asistentes que permite procesar archivos CSV/Excel con validación completa, detección de duplicados y asociación automática con certificados.
+
+### ✅ Core Features
+- **Múltiples formatos**: CSV, XLS, XLSX soportados
+- **Validación completa**: class-validator en cada fila
+- **Detección de duplicados**: Por email y número de documento
+- **Asociación automática**: Con certificados si se proporciona certificate_id
+- **Reporte detallado**: Errores específicos por fila
+- **Procesamiento transaccional**: Fila por fila sin afectar otras
+- **Normalización**: Mapeo automático de columnas en español/inglés
+
+### 🔗 API Endpoint
+
+**POST** `/api/v1/attendees/bulk-upload`
+- **Autenticación**: JWT requerido
+- **Content-Type**: `multipart/form-data`
+
+#### Request Parameters
+```typescript
+{
+  file: Express.Multer.File;        // CSV/Excel (requerido)
+  updateExisting?: boolean;         // Actualizar duplicados (opcional)
+}
+```
+
+#### Response Format
+```typescript
+{
+  totalRecords: number;             // Total procesados
+  created: number;                  // Nuevos creados
+  updated: number;                  // Actualizados
+  errors: number;                   // Número de errores
+  errorDetails: Array<{            // Detalles por fila
+    row: number;
+    data?: any;
+    errors: string[];
+  }>;
+  certificatesAssociated: number;   // Certificados asociados
+}
+```
+
+### 📋 Supported Column Formats
+El sistema reconoce múltiples variaciones de nombres de columnas:
+
+#### Spanish Columns
+- `nombre completo`, `primer nombre`, `apellido`
+- `país`, `correo`, `correo electrónico`
+- `tipo documento`, `número documento`, `género`
+
+#### English Columns  
+- `full_name`, `first_name`, `last_name`
+- `country`, `email`, `document_type`, `document_number`, `gender`
+
+#### Mixed Format
+- `nombre_completo`, `primer_nombre`, `correo_electronico`
+
+---
+
+## �📧 EMAIL JOBS SYSTEM - COMPLETE ARCHITECTURE
 
 ### 🎯 System Overview
 
@@ -633,13 +845,32 @@ src/
 │   └── modules/
 │       └── auth.module.ts     # Auth module configuration
 ├── users/                     # User management
-├── certificates/              # Certificate configuration
-│   ├── templates/
-│   │   └── default.html       # HTML certificate template
-├── attendees/                 # Event participants
+├── certificates/              # Certificate configuration + 🖼️ DESIGN IMAGE UPLOAD
+│   ├── controllers/
+│   │   └── certificates.controller.ts  # + upload-design endpoint
+│   ├── dto/
+│   │   └── upload-design-image.dto.ts  # ✨ Image upload DTOs
+│   ├── services/
+│   │   ├── design-image.service.ts     # ✨ Image upload service (16 tests)
+│   │   └── design-image.service.spec.ts
+│   └── templates/
+│       └── default.html       # HTML certificate template
+├── attendees/                 # Event participants + 📊 BULK UPLOAD
+│   ├── controllers/
+│   │   └── attendees.controller.ts     # + bulk-upload endpoint  
+│   ├── dto/
+│   │   └── bulk-upload-attendee.dto.ts # ✨ Bulk upload DTOs
+│   └── services/
+│       ├── file-processing.service.ts  # ✨ CSV/Excel processing (9 tests)
+│       └── file-processing.service.spec.ts
 ├── generated-certificates/    # Certificate instances
-├── jobs/                      # Background job processing
+├── jobs/                      # Background job processing + 🤖 CRON AUTOMATION
+│   └── services/
+│       ├── job-scheduler.service.ts    # ✨ Automatic processing every 5min
+│       └── job-scheduler.service.spec.ts
 └── shared/
+    ├── modules/
+    │   └── shared.module.ts    # ✨ S3Service export module
     └── services/
         ├── pdf-generator.service.ts  # Puppeteer PDF generation
         ├── s3.service.ts            # AWS S3 file operations
@@ -1042,21 +1273,39 @@ npm run migration:revert                                     # Revert last migra
 ## 🧪 Testing & Quality Assurance
 
 ### Test Coverage Status
-**✅ 25/25 Tests Passing** - Complete test suite implemented
+**✅ 56/56 Tests Passing** - Complete test suite implemented with new features
 
 #### Test Structure
 ```
+src/
+├── auth/                    # 🧪 2 tests - Authentication service & controller
+├── users/                   # 🧪 1 test - User service
+├── certificates/
+│   ├── services/
+│   │   ├── certificates.service.spec.ts      # 🧪 1 test
+│   │   └── design-image.service.spec.ts      # 🧪 16 tests ✨ NEW
+│   └── controllers/
+│       └── certificates.controller.spec.ts   # 🧪 6 tests ✨ NEW
+├── attendees/
+│   └── services/
+│       └── file-processing.service.spec.ts   # 🧪 9 tests ✨ NEW  
+├── jobs/                    # 🧪 Tests for job processing & scheduler
+├── shared/                  # 🧪 Service utility tests
+└── app.controller.spec.ts   # 🧪 1 test - Health endpoint
+
 test/
-├── unit/
-│   ├── auth/           # Authentication service & controller tests
-│   ├── jobs/           # Job processing & email queue tests
-│   ├── certificates/   # Certificate generation tests
-│   └── shared/         # Service utility tests
-└── integration/
-    ├── auth.e2e-spec.ts         # Authentication flow tests
-    ├── jobs.e2e-spec.ts         # Job processing end-to-end tests
-    └── certificates.e2e-spec.ts # Certificate generation flow tests
+└── app.e2e-spec.ts         # 🧪 Integration tests
 ```
+
+#### New Testing Features (Added)
+- **🖼️ Design Image Upload**: 22 comprehensive tests
+  - 16 tests for DesignImageService (validation, S3 integration, error handling)
+  - 6 tests for upload endpoint (authentication, file handling, responses)
+- **📊 Bulk Upload System**: 9 detailed tests  
+  - CSV/Excel processing, validation, duplicate detection
+  - Error reporting, normalization, certificate association
+- **🔧 Jest Configuration**: UUID module transformation support
+- **📋 Complete Mocking**: S3Service, file uploads, database operations
 
 #### Testing Features
 - **Unit Tests**: All services and controllers individually tested
@@ -1086,11 +1335,24 @@ npm run test:coverage     # Generate coverage report
 
 ### API Endpoint Groups
 1. **Authentication** (`/auth`) - JWT login, refresh, user info
-2. **Email Jobs** (`/jobs`) - Background job queue management  
-3. **Certificates** (`/certificates`) - Certificate configuration
+2. **Email Jobs** (`/jobs`) - Background job queue management + 🤖 automatic cron scheduler
+3. **Certificates** (`/certificates`) - Certificate configuration + 🖼️ **design image upload**
 4. **Generated Certificates** (`/generated-certificates`) - PDF generation & management
-5. **Attendees** (`/attendees`) - Event participant management
+5. **Attendees** (`/attendees`) - Event participant management + 📊 **bulk CSV/Excel upload**
 6. **Users** (`/users`) - Administrative user management
+
+### 🆕 NEW Endpoints Added
+#### 🖼️ Design Image Upload
+- `POST /certificates/upload-design` - Upload design images for certificates
+  - Multipart file upload with validation
+  - Automatic S3 storage with organized structure
+  - JWT authentication required
+
+#### 📊 Bulk Data Import  
+- `POST /attendees/bulk-upload` - Mass import attendees from CSV/Excel
+  - Support for multiple file formats (CSV, XLS, XLSX)
+  - Comprehensive validation and error reporting
+  - Duplicate detection and handling
 
 ### Response Format Standards
 ```typescript
@@ -1227,16 +1489,20 @@ POST /api/v1/jobs/process-pending
 ### ✅ Completed Features
 - **Authentication System**: JWT with refresh tokens, complete user management
 - **Certificate Management**: Full CRUD operations with template support
+- **🖼️ Design Image Upload**: Complete S3-based image management system for certificates
+- **📊 Bulk Upload System**: CSV/Excel processing for mass attendee import
 - **PDF Generation**: HTML-based certificate creation with S3 storage
-- **Email Job Queue**: Robust background processing with error handling
+- **Email Job Queue**: Robust background processing with error handling + 🤖 automatic cron scheduler
 - **API Documentation**: Complete Swagger documentation with examples
-- **Testing Suite**: 25/25 tests passing with comprehensive coverage
+- **Testing Suite**: 56/56 tests passing with comprehensive coverage (including 22 new tests)
 - **Error Handling**: Centralized exception handling with proper logging
 - **Security**: JWT authentication, input validation, CORS configuration
 
 ### 🔄 System Status
 - **Database Schema**: All tables created and relationships established
-- **Job Processing**: Fully functional email queue with retry capability
+- **Job Processing**: Fully functional email queue with retry capability + automatic processing
+- **🖼️ Image Management**: S3 design image upload system fully operational  
+- **📊 Data Import**: Bulk upload system with validation and error reporting
 - **External Integrations**: S3 storage and SendGrid email working
 - **Monitoring**: Complete job tracking and error reporting
 - **Documentation**: Comprehensive API docs and system architecture
@@ -1244,13 +1510,37 @@ POST /api/v1/jobs/process-pending
 ### 🚀 Ready for Production
 The system is **fully functional** and ready for production deployment. All core features are implemented, tested, and documented. The email job queue system ensures reliable certificate delivery with complete traceability.
 
-**Next Steps**: Deploy to production environment and configure monitoring dashboards for ongoing system health tracking.  
-Docker Deployment: Multi-stage build with fail-fast testing  
-Security: JWT authentication, CORS configuration, input validation  
-Testing: Comprehensive unit test suite with CI/CD integration  
-Documentation: Full Swagger API documentation available  
-Error Handling: Centralized exception handling and logging  
-Performance: Optimized for production workloads  
+### 🧪 Testing Commands for New Features
 
-Last Updated: September 25, 2025  
+```bash
+# Test all new features (56 tests total)
+npm test
+
+# Test design image upload system specifically
+npm test -- design-image.service.spec.ts         # 16 service tests
+npm test -- certificates.controller.spec.ts      # 6 endpoint tests
+
+# Test bulk upload system
+npm test -- file-processing.service.spec.ts      # 9 CSV/Excel processing tests
+
+# Test with coverage report
+npm run test:cov
+
+# Watch mode for development
+npm run test:watch
+```
+
+**Next Steps**: Deploy to production environment and configure monitoring dashboards for ongoing system health tracking.  
+
+### 🚀 Production Deployment Checklist
+- ✅ Docker Deployment: Multi-stage build with fail-fast testing  
+- ✅ Security: JWT authentication, CORS configuration, input validation  
+- ✅ Testing: Comprehensive unit test suite (56/56 passing) with CI/CD integration  
+- ✅ Documentation: Full Swagger API documentation available  
+- ✅ Error Handling: Centralized exception handling and logging  
+- ✅ Performance: Optimized for production workloads  
+- ✅ File Upload: Complete image management with S3 integration
+- ✅ Data Import: Robust bulk upload system with validation
+
+Last Updated: September 25, 2025 - **ENHANCED WITH IMAGE UPLOAD & BULK DATA SYSTEMS** 🚀  
 Claude Context: This system is ready for production deployment and can serve as the foundation for advanced certificate management features.

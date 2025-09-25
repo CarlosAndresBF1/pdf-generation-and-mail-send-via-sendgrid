@@ -152,7 +152,7 @@ export class FileProcessingService {
    */
   private normalizeColumnName(column: string): string {
     const normalized = column.toLowerCase().trim();
-    
+
     const columnMap: Record<string, string> = {
       'nombre completo': 'fullName',
       nombre_completo: 'fullName',

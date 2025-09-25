@@ -51,11 +51,15 @@ describe('FileProcessingService', () => {
     }).compile();
 
     service = module.get<FileProcessingService>(FileProcessingService);
-    attendeeRepository = module.get<Repository<Attendee>>(getRepositoryToken(Attendee));
-    certificateRepository = module.get<Repository<Certificate>>(getRepositoryToken(Certificate));
-    generatedCertificateRepository = module.get<Repository<GeneratedCertificate>>(
-      getRepositoryToken(GeneratedCertificate),
+    attendeeRepository = module.get<Repository<Attendee>>(
+      getRepositoryToken(Attendee),
     );
+    certificateRepository = module.get<Repository<Certificate>>(
+      getRepositoryToken(Certificate),
+    );
+    generatedCertificateRepository = module.get<
+      Repository<GeneratedCertificate>
+    >(getRepositoryToken(GeneratedCertificate));
   });
 
   afterEach(() => {
@@ -186,7 +190,7 @@ Juan Pérez,juan@example.com,Colombia,CC,12345678,M,1`;
       // Mock repositories
       mockCertificateRepository.find.mockResolvedValue([{ id: 1 }]);
       mockAttendeeRepository.findOne.mockResolvedValue(null);
-      
+
       const mockAttendee = {
         id: 1,
         fullName: 'Juan Pérez',
@@ -196,7 +200,7 @@ Juan Pérez,juan@example.com,Colombia,CC,12345678,M,1`;
         documentNumber: '12345678',
         gender: 'M',
       };
-      
+
       mockAttendeeRepository.create.mockReturnValue(mockAttendee);
       mockAttendeeRepository.save.mockResolvedValue(mockAttendee);
       mockGeneratedCertificateRepository.findOne.mockResolvedValue(null);
