@@ -18,7 +18,7 @@ export class TestCertificateDto {
 
   @ApiProperty({
     description: 'Nombre completo del asistente',
-    example: 'Juan Carlos Pérez García',
+    example: 'Carlos Andres Beltran Franco',
   })
   @IsString({ message: 'El nombre completo debe ser un texto' })
   @IsNotEmpty({ message: 'El nombre completo es requerido' })
@@ -37,7 +37,7 @@ export class TestCertificateDto {
 
   @ApiProperty({
     description: 'Correo electrónico del asistente',
-    example: 'juan.perez@example.com',
+    example: 'dev@inmov.com',
   })
   @IsEmail({}, { message: 'El email debe tener un formato válido' })
   @IsNotEmpty({ message: 'El email es requerido' })
@@ -47,14 +47,13 @@ export class TestCertificateDto {
 export class TestCertificateResponseDto {
   @ApiProperty({
     description: 'Mensaje de confirmación del envío',
-    example:
-      'Certificado de prueba enviado exitosamente a juan.perez@example.com',
+    example: 'Certificado de prueba enviado exitosamente a dev@inmov.com',
   })
   message: string;
 
   @ApiProperty({
     description: 'Email al que se envió el certificado',
-    example: 'juan.perez@example.com',
+    example: 'dev@inmov.com',
   })
   email: string;
 

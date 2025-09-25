@@ -76,6 +76,7 @@ describe('CertificatesService', () => {
       baseDesignUrl: 'https://example.com/design.jpg',
       sendgridTemplateId: 'template-123',
       eventLink: 'https://example.com/event',
+      senderEmail: 'admin@testclient.com',
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -126,6 +127,7 @@ describe('CertificatesService', () => {
         'template-123',
         Buffer.from('mock-pdf'),
         'TestClient_Juan_Carlos_Pérez_certificate.pdf',
+        'admin@testclient.com',
       );
 
       expect(result).toEqual({

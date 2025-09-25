@@ -117,6 +117,7 @@ export class CertificatesService {
       certificate.sendgridTemplateId,
       pdfBuffer,
       pdfFilename,
+      certificate.senderEmail, // Usar el email del certificado configurado en SendGrid
     );
 
     return {

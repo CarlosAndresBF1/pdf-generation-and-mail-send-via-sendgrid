@@ -33,6 +33,9 @@ export class Certificate {
   @Column({ name: 'event_link', length: 500 })
   eventLink: string;
 
+  @Column({ name: 'sender_email', length: 255, nullable: true })
+  senderEmail: string;
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 

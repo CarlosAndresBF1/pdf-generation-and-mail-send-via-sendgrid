@@ -1,6 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as sgMail from '@sendgrid/mail';
+import { EmailException } from '../exceptions/email.exception';
+
+interface SendGridError {
+  response?: {
+    body?: {
+      errors?: Array<{
+        message: string;
+        field?: string;
+      }>;
+    };
+  };
+}
 
 export interface EmailData {
   to: string;
@@ -16,30 +27,50 @@ export interface EmailData {
 
 @Injectable()
 export class EmailService {
+  private sgMail: any;
+
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>('SENDGRID_API_KEY');
+    // Initialize SendGrid synchronously
+    this.sgMail = require('@sendgrid/mail');
+    // Use MAIL_API_KEY which contains the SendGrid API Key
+    const apiKey = this.configService.get<string>('MAIL_API_KEY');
     if (apiKey) {
-      sgMail.setApiKey(apiKey);
+      this.sgMail.setApiKey(apiKey);
     }
   }
 
-  private getFromEmail(): string {
+  private getFromEmail(customEmail?: string): string {
     return (
-      this.configService.get<string>('SENDGRID_FROM_EMAIL') ||
+      customEmail ||
+      this.configService.get<string>('MAIL_FROM_ADDRESS') ||
       'noreply@example.com'
     );
   }
 
-  async sendEmail(emailData: EmailData): Promise<void> {
+  async sendEmail(
+    emailData: EmailData,
+    customFromEmail?: string,
+  ): Promise<void> {
+    if (!this.sgMail) {
+      throw new EmailException('SendGrid not initialized properly');
+    }
+
     const msg = {
       to: emailData.to,
-      from: this.getFromEmail(),
+      from: this.getFromEmail(customFromEmail),
       templateId: emailData.templateId,
       dynamicTemplateData: emailData.dynamicTemplateData,
       attachments: emailData.attachments,
     };
 
-    await sgMail.send(msg);
+    try {
+      await this.sgMail.send(msg);
+    } catch (error) {
+      throw new EmailException(
+        'Error enviando el email',
+        error as SendGridError,
+      );
+    }
   }
 
   async sendCertificateEmail(
@@ -52,6 +83,7 @@ export class EmailService {
     templateId: string,
     pdfBuffer: Buffer,
     pdfFilename: string,
+    customFromEmail?: string,
   ): Promise<void> {
     const emailData: EmailData = {
       to: recipientEmail,
@@ -73,6 +105,6 @@ export class EmailService {
       ],
     };
 
-    await this.sendEmail(emailData);
+    await this.sendEmail(emailData, customFromEmail);
   }
 }

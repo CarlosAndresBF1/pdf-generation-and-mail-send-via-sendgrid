@@ -10,7 +10,7 @@
 **Port**: 3969 (external) → 3000 (internal)  
 **API Prefix**: /api/v1  
 **Documentation**: Available at /api/docs (Swagger)  
-**Test Coverage**: 56/56 tests passing ✅ (Including 22 new tests for Image Upload + Bulk Upload)
+**Test Coverage**: 51/51 tests passing ✅ (Including test certificate endpoint and email error handling)
 
 ### Business Purpose
 Sistema de generación y envío automatizado de certificados en PDF para eventos corporativos con sistema robusto de cola de trabajos. Características principales:
@@ -84,6 +84,7 @@ All table and column names are in English with snake_case convention
    - `pdf_template` (varchar - internal HTML template reference)
    - `sendgrid_template_id` (varchar - SendGrid template ID)
    - `event_link` (varchar - event URL for emails)
+   - `sender_email` (varchar(255) NULL - custom sender email for certificate emails)
    - `is_active` (boolean - active status)
    - `created_at`, `updated_at`
 
@@ -1498,12 +1499,104 @@ POST /api/v1/jobs/process-pending
 - **Error Handling**: Centralized exception handling with proper logging
 - **Security**: JWT authentication, input validation, CORS configuration
 
+## TEST CERTIFICATE SYSTEM
+
+### System Overview
+Complete test certificate endpoint that generates and sends certificates without database storage. Allows administrators to test certificate configurations and SendGrid integration.
+
+### Key Features
+- **No Database Storage**: Generates PDFs and sends emails without creating attendee or generated_certificate records
+- **Custom Sender Email**: Uses certificate.sender_email field for personalized from addresses
+- **Structured Error Handling**: EmailException class provides detailed SendGrid error responses
+- **JWT Authentication**: Requires administrative authentication
+- **Real-time Testing**: Immediate certificate generation and email delivery
+
+### API Endpoint
+**POST** `/api/v1/certificates/test-certificate`
+- **Authentication**: JWT required
+- **Content-Type**: `application/json`
+
+#### Request Body
+```typescript
+{
+  certificateId: number;    // Certificate configuration ID
+  fullName: string;        // Test recipient name
+  documentNumber: string;  // Test document number
+  email: string;          // Test email address
+}
+```
+
+#### Response Format
+```typescript
+{
+  message: string;        // Success confirmation
+  email: string;         // Recipient email
+  certificateId: number;  // Certificate used
+  sentAt: Date;          // Send timestamp
+}
+```
+
+### Email Error Handling System
+
+#### EmailException Class
+Custom exception class that converts SendGrid errors into structured HTTP 400 responses instead of generic 500 errors.
+
+#### Error Response Structure
+```typescript
+{
+  statusCode: 400,
+  message: "Error enviando email: [specific error]",
+  error: "Email Error",
+  details: [
+    {
+      message: string,
+      field: string,
+      help: string
+    }
+  ]
+}
+```
+
+#### Supported Error Cases
+- Invalid sender email addresses
+- Unverified sender domains
+- Invalid SendGrid template IDs
+- Missing required email fields
+- SendGrid API authentication issues
+
+### Database Schema Updates
+
+#### certificates Table - sender_email Field
+- **Migration**: 1758842143000-AddSenderEmailToCertificates
+- **Field**: `sender_email` varchar(255) NULL
+- **Purpose**: Store custom sender email addresses per certificate
+- **SendGrid Requirements**: Email must be verified in SendGrid dashboard or domain must be authenticated
+
+### Technical Implementation
+
+#### Core Services
+- **CertificatesService.generateAndSendTestCertificate**: Main test certificate workflow
+- **EmailService**: Enhanced with custom sender email support and error handling
+- **EmailException**: Structured error responses for SendGrid failures
+
+#### Configuration Updates
+- **JWT Token Duration**: Extended to 3 days (JWT_EXPIRES_IN=3d)
+- **Email Configuration**: Uses MAIL_API_KEY for SendGrid integration
+- **MAIL_FROM_ADDRESS**: Must be valid email format (user@domain.com)
+
+### Testing
+- **Updated Test Suite**: 51/51 tests passing
+- **Mock Updates**: Certificate mocks include sender_email field
+- **Service Tests**: Email service calls include custom sender parameter
+
 ### 🔄 System Status
-- **Database Schema**: All tables created and relationships established
+- **Database Schema**: All tables created and relationships established + sender_email field
 - **Job Processing**: Fully functional email queue with retry capability + automatic processing
 - **🖼️ Image Management**: S3 design image upload system fully operational  
 - **📊 Data Import**: Bulk upload system with validation and error reporting
-- **External Integrations**: S3 storage and SendGrid email working
+- **📧 Test Certificates**: Complete test certificate system with custom sender emails
+- **🚨 Error Handling**: Structured SendGrid error responses with detailed information
+- **External Integrations**: S3 storage and SendGrid email working with custom sender support
 - **Monitoring**: Complete job tracking and error reporting
 - **Documentation**: Comprehensive API docs and system architecture
 
@@ -1513,15 +1606,14 @@ The system is **fully functional** and ready for production deployment. All core
 ### 🧪 Testing Commands for New Features
 
 ```bash
-# Test all new features (56 tests total)
+# Test all features (51 tests total)
 npm test
 
-# Test design image upload system specifically
-npm test -- design-image.service.spec.ts         # 16 service tests
-npm test -- certificates.controller.spec.ts      # 6 endpoint tests
-
-# Test bulk upload system
-npm test -- file-processing.service.spec.ts      # 9 CSV/Excel processing tests
+# Test specific components
+npm test -- certificates.service.spec.ts         # Test certificate service including test endpoint
+npm test -- email.service.spec.ts               # Test email service error handling
+npm test -- design-image.service.spec.ts        # Test design image upload system
+npm test -- file-processing.service.spec.ts     # Test bulk upload system
 
 # Test with coverage report
 npm run test:cov
@@ -1532,15 +1624,17 @@ npm run test:watch
 
 **Next Steps**: Deploy to production environment and configure monitoring dashboards for ongoing system health tracking.  
 
-### 🚀 Production Deployment Checklist
+### Production Deployment Checklist
 - ✅ Docker Deployment: Multi-stage build with fail-fast testing  
-- ✅ Security: JWT authentication, CORS configuration, input validation  
-- ✅ Testing: Comprehensive unit test suite (56/56 passing) with CI/CD integration  
+- ✅ Security: JWT authentication with 3-day token expiration, CORS configuration, input validation  
+- ✅ Testing: Comprehensive unit test suite (51/51 passing) with CI/CD integration  
 - ✅ Documentation: Full Swagger API documentation available  
-- ✅ Error Handling: Centralized exception handling and logging  
+- ✅ Error Handling: Centralized exception handling with structured SendGrid error responses  
 - ✅ Performance: Optimized for production workloads  
 - ✅ File Upload: Complete image management with S3 integration
 - ✅ Data Import: Robust bulk upload system with validation
+- ✅ Test Certificates: Complete test certificate system with custom sender emails
+- ✅ Email Integration: SendGrid with custom sender support and detailed error handling
 
-Last Updated: September 25, 2025 - **ENHANCED WITH IMAGE UPLOAD & BULK DATA SYSTEMS** 🚀  
-Claude Context: This system is ready for production deployment and can serve as the foundation for advanced certificate management features.
+Last Updated: September 25, 2025 - **ENHANCED WITH TEST CERTIFICATE SYSTEM AND EMAIL ERROR HANDLING**  
+Claude Context: Complete certificate management system with test functionality, custom sender emails, and structured error handling. Ready for production deployment with comprehensive monitoring and validation capabilities.
