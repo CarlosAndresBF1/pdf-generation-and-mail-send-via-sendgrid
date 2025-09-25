@@ -14,6 +14,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { JobsService } from '../services/jobs.service';
+import { JobSchedulerService } from '../services/job-scheduler.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 @ApiTags('Email Jobs')
@@ -21,7 +22,10 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('jwt-auth')
 export class JobsController {
-  constructor(private readonly jobsService: JobsService) {}
+  constructor(
+    private readonly jobsService: JobsService,
+    private readonly jobSchedulerService: JobSchedulerService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -106,5 +110,45 @@ export class JobsController {
   })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.jobsService.findOne(id);
+  }
+
+  @Get('scheduler/status')
+  @ApiOperation({
+    summary: 'Get cron scheduler status',
+    description:
+      'Returns the current status of the automatic job processing scheduler',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Scheduler status retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        isProcessing: { type: 'boolean' },
+        nextExecutionIn: { type: 'string' },
+      },
+    },
+  })
+  getSchedulerStatus() {
+    return this.jobSchedulerService.getSchedulerStatus();
+  }
+
+  @Post('scheduler/force')
+  @ApiOperation({
+    summary: 'Force manual job processing',
+    description:
+      'Manually triggers job processing outside of the scheduled cron cycle',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Manual processing triggered successfully',
+  })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Cannot force processing while automatic processing is running',
+  })
+  async forceProcessing() {
+    return await this.jobSchedulerService.forceProcessJobs();
   }
 }

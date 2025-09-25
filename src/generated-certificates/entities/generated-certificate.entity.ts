@@ -37,14 +37,11 @@ export class GeneratedCertificate {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @ManyToOne(
-    () => Certificate,
-    (certificate) => certificate.generatedCertificates,
-  )
+  @ManyToOne(() => Certificate, 'generatedCertificates')
   @JoinColumn({ name: 'certificate_id' })
   certificate: Certificate;
 
-  @ManyToOne(() => Attendee, (attendee) => attendee.generatedCertificates)
+  @ManyToOne(() => Attendee, 'generatedCertificates')
   @JoinColumn({ name: 'attendee_id' })
   attendee: Attendee;
 

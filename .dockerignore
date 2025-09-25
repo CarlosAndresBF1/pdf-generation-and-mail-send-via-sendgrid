@@ -16,6 +16,6 @@ coverage
 .env.test.local
 .env.production.local
 jest.config.js
-/.github/instructions/project.instructions.md
+/.github/instructions/
 *.ts.backup*
 /IA_context

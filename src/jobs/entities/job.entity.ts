@@ -6,6 +6,7 @@ import {
   OneToOne,
   JoinColumn,
 } from 'typeorm';
+import { GeneratedCertificate } from '../../generated-certificates/entities/generated-certificate.entity';
 
 export enum JobStatus {
   PENDING = 'pending',
@@ -37,7 +38,7 @@ export class Job {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @OneToOne('GeneratedCertificate', 'job')
+  @OneToOne(() => GeneratedCertificate, 'job')
   @JoinColumn({ name: 'generated_certificate_id' })
-  generatedCertificate: any;
+  generatedCertificate: GeneratedCertificate;
 }

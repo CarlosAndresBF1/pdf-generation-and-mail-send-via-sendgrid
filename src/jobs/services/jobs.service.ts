@@ -14,7 +14,11 @@ export class JobsService {
     private readonly configService: ConfigService,
   ) {}
 
-  async processPendingJobs(): Promise<void> {
+  async processPendingJobs(): Promise<{
+    processed: number;
+    successful: number;
+    failed: number;
+  }> {
     const pendingJobs = await this.jobRepository.find({
       where: { status: JobStatus.PENDING },
       relations: [
@@ -25,9 +29,24 @@ export class JobsService {
       take: 10, // Process max 10 jobs at a time
     });
 
+    let successful = 0;
+    let failed = 0;
+
     for (const job of pendingJobs) {
-      await this.processJob(job);
+      try {
+        await this.processJob(job);
+        successful++;
+      } catch (error) {
+        failed++;
+        console.error(`Job ${job.id} processing failed:`, error);
+      }
     }
+
+    return {
+      processed: pendingJobs.length,
+      successful,
+      failed,
+    };
   }
 
   private async processJob(job: Job): Promise<void> {
@@ -39,24 +58,12 @@ export class JobsService {
       const { generatedCertificate } = job;
       const { certificate, attendee } = generatedCertificate;
 
-      // Fetch certificate PDF from S3 and generate fresh copy
-      const certificatePdfUrl = generatedCertificate.s3Url;
-
       // For now, we'll generate a fresh PDF instead of downloading from S3
       // In production, you might want to download from S3 or cache the buffer
       const pdfBuffer = Buffer.from('PDF content would be here'); // Placeholder
 
       // Prepare email data
       const downloadLink = `${this.configService.get<string>('APP_URL') || 'http://localhost:3000'}/certificate/${generatedCertificate.id}/download`;
-
-      const emailData = {
-        toEmail: attendee.email,
-        toName: attendee.fullName,
-        certificateUrl: certificatePdfUrl,
-        eventLink: certificate.eventLink,
-        downloadLink: downloadLink,
-        eventName: certificate.eventName,
-      };
 
       // Send email
       await this.emailService.sendCertificateEmail(
@@ -84,7 +91,8 @@ export class JobsService {
 
       // Update job with error
       job.status = JobStatus.ERROR;
-      job.errorMessage = error.message || 'Unknown error occurred';
+      job.errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       await this.jobRepository.save(job);
     }
@@ -95,6 +103,7 @@ export class JobsService {
     sent: number;
     error: number;
     total: number;
+    successRate: number;
   }> {
     const [pending, sent, error, total] = await Promise.all([
       this.jobRepository.count({ where: { status: JobStatus.PENDING } }),
@@ -103,7 +112,9 @@ export class JobsService {
       this.jobRepository.count(),
     ]);
 
-    return { pending, sent, error, total };
+    const successRate = total > 0 ? Math.round((sent / total) * 100) : 0;
+
+    return { pending, sent, error, total, successRate };
   }
 
   async findAll(): Promise<Job[]> {

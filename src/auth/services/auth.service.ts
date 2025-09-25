@@ -9,7 +9,6 @@ import {
   RefreshResponse,
   AuthenticatedUser,
 } from '../interfaces/auth.interfaces';
-import { User } from '../entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -61,7 +60,7 @@ export class AuthService {
   async refresh(refreshToken: string): Promise<RefreshResponse> {
     try {
       // Verificar el refresh token
-      const payload = this.jwtService.verify(refreshToken) as any;
+      const payload: JwtPayload = this.jwtService.verify(refreshToken);
 
       // Verificar que el usuario aún existe
       const user = await this.usersService.findByUsername(payload.userName);
