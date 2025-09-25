@@ -83,7 +83,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('jwt-auth')
   @ApiOperation({
     summary: 'Obtener usuario actual',
     description: 'Obtiene la información del usuario autenticado',
