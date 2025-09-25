@@ -1,14 +1,7 @@
-import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import { LoginUserDto } from '../dto/login-user.dto';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiBody,
-} from '@nestjs/swagger';
-import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -63,13 +56,12 @@ export class AuthController {
       ? loginUserDto.username.toUpperCase()
       : '';
 
-    const user = await this.authService.validateUser(
+    const user: any = await this.authService.validateUser(
       loginUserDto.username,
       loginUserDto.password,
     );
 
     const loginResult = await this.authService.login(user);
-    console.log('Login result:', loginResult);
 
     return loginResult;
   }

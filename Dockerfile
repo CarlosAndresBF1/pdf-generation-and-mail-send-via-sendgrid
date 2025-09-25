@@ -12,13 +12,30 @@ RUN npm ci && npm cache clean --force
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Install Chrome dependencies for testing (needed for Puppeteer tests)
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# Tell Puppeteer to skip installing Chrome. We'll be using the installed package.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Run tests BEFORE building (fail fast if tests don't pass)
+RUN echo "🧪 Running unit tests..." && npm run test
+
+# Build the application (only if tests pass)
+RUN echo "🏗️ Building application..." && npm run build
 
 # Production stage
 FROM node:22-alpine AS production
 
-# Install Chrome dependencies for Puppeteer
+# Install Chrome dependencies for Puppeteer (for PDF generation in production)
 RUN apk add --no-cache \
     chromium \
     nss \

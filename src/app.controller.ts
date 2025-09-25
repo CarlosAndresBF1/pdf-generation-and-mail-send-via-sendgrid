@@ -7,19 +7,6 @@ import { AppService } from './app.service';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Get()
-  @ApiOperation({
-    summary: 'Application welcome message',
-    description: 'Returns a welcome message for the API',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Welcome message returned successfully',
-  })
-  getHello(): string {
-    return this.appService.getHello();
-  }
-
   @Get('health')
   @ApiOperation({
     summary: 'Health check',
