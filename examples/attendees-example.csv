@@ -1,0 +1,11 @@
+fullName,firstName,lastName,email,country,documentType,documentNumber,gender,certificateId
+Juan Carlos Pérez García,Juan Carlos,Pérez García,juan.perez@example.com,Colombia,CC,12345678,M,1
+María Elena Rodríguez López,María Elena,Rodríguez López,maria.rodriguez@example.com,México,RFC,87654321,F,1
+John Smith,,Smith,john.smith@example.com,Estados Unidos,Passport,A12345678,Male,2
+Ana Sofía González,Ana Sofía,González,ana.gonzalez@example.com,Colombia,CC,11223344,F,
+Carlos Mendoza,Carlos,Mendoza,carlos.mendoza@example.com,Perú,DNI,98765432,M,1
+Linda Johnson,Linda,Johnson,linda.johnson@example.com,Canadá,Passport,C98765432,Female,2
+Roberto Silva,Roberto,Silva,roberto.silva@example.com,Brasil,CPF,123456789,M,1
+Emma Wilson,Emma,Wilson,emma.wilson@example.com,Reino Unido,Passport,UK123456,F,2
+Diego Hernández,Diego,Hernández,diego.hernandez@example.com,España,DNI,12345678X,M,
+Sophie Martin,Sophie,Martin,sophie.martin@example.com,Francia,Passport,FR456789,F,1

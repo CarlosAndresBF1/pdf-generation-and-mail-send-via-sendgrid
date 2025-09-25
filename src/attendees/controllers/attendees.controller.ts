@@ -8,7 +8,11 @@ import {
   Delete,
   ParseIntPipe,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Query,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -16,10 +20,14 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiBody,
+  ApiConsumes,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { AttendeesService } from '../services/attendees.service';
 import { CreateAttendeeDto } from '../dto/create-attendee.dto';
 import { UpdateAttendeeDto } from '../dto/update-attendee.dto';
+import { BulkUploadResponseDto } from '../dto/bulk-upload-attendee.dto';
+import { FileProcessingService } from '../services/file-processing.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 @ApiTags('Attendees')
@@ -27,7 +35,10 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('jwt-auth')
 export class AttendeesController {
-  constructor(private readonly attendeesService: AttendeesService) {}
+  constructor(
+    private readonly attendeesService: AttendeesService,
+    private readonly fileProcessingService: FileProcessingService,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -135,6 +146,55 @@ export class AttendeesController {
     @Body() updateAttendeeDto: UpdateAttendeeDto,
   ) {
     return this.attendeesService.update(id, updateAttendeeDto);
+  }
+
+  @Post('bulk-upload')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Upload attendees from file',
+    description:
+      'Upload and process attendees from CSV or Excel file with optional certificate association',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'File upload with attendee data',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'CSV or Excel file with attendee data',
+        },
+        updateExisting: {
+          type: 'boolean',
+          description:
+            'Whether to update existing attendees or skip duplicates',
+          default: false,
+        },
+      },
+    },
+  })
+  @ApiQuery({
+    name: 'updateExisting',
+    required: false,
+    type: Boolean,
+    description: 'Update existing attendees if found',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'File processed successfully',
+    type: BulkUploadResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - invalid file or format',
+  })
+  async bulkUpload(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('updateExisting') updateExisting = false,
+  ): Promise<BulkUploadResponseDto> {
+    return this.fileProcessingService.processFile(file, updateExisting);
   }
 
   @Delete(':id')
