@@ -5,6 +5,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/modules/auth.module';
 import { UsersModule } from './users/modules/users.module';
+import { CertificatesModule } from './certificates/modules/certificates.module';
+import { AttendeesModule } from './attendees/modules/attendees.module';
+import { GeneratedCertificatesModule } from './generated-certificates/generated-certificates.module';
+import { JobsModule } from './jobs/jobs.module';
 
 @Module({
   imports: [
@@ -30,6 +34,10 @@ import { UsersModule } from './users/modules/users.module';
     }),
     AuthModule,
     UsersModule,
+    CertificatesModule,
+    AttendeesModule,
+    GeneratedCertificatesModule,
+    JobsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

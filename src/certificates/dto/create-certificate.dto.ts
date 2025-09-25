@@ -41,7 +41,8 @@ export class CreateCertificateDto {
 
   @ApiProperty({
     description: 'Base design image URL in S3',
-    example: 'https://cdn.creadoresdelcambionestle.com/designs/summit-2025-bg.jpg',
+    example:
+      'https://cdn.creadoresdelcambionestle.com/designs/summit-2025-bg.jpg',
     maxLength: 500,
   })
   @IsUrl()

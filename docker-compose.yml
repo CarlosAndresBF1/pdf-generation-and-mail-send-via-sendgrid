@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3969:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - certification-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/v1/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - db-check
+    volumes:
+      # Mount certificates templates
+      - ./src/certificates/templates:/app/src/certificates/templates:ro
+
+  # Service to check if external database is available
+  db-check:
+    image: mysql:8.0
+    command: >
+      sh -c "
+        mysql -h$$DB_HOST -P$$DB_PORT -u$$DB_USERNAME -p$$DB_PASSWORD -e 'SELECT 1' > /dev/null 2>&1 &&
+        echo 'Database connection successful' ||
+        (echo 'Database connection failed' && exit 1)
+      "
+    env_file:
+      - .env
+    networks:
+      - certification-network
+    restart: "no"
+
+networks:
+  certification-network:
+    driver: bridge
+# Note: Database is not included in this docker-compose as per requirements
+# The application connects to an external MySQL database using environment variables

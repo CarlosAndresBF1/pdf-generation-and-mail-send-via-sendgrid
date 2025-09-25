@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificado</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-image: url('{{baseDesignUrl}}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            width: 297mm;
+            height: 210mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: #2c3e50;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .background-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 1;
+        }
+        
+        .certificate-content {
+            position: relative;
+            z-index: 2;
+            max-width: 85%;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 60px 80px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 3px solid #d4af37;
+        }
+        
+        .certificate-header {
+            margin-bottom: 40px;
+        }
+        
+        .certificate-title {
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .certificate-subtitle {
+            font-size: 24px;
+            font-weight: 300;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        
+        .event-name {
+            font-size: 32px;
+            font-weight: 600;
+            color: #e74c3c;
+            margin: 30px 0;
+            line-height: 1.2;
+        }
+        
+        .certificate-text {
+            font-size: 20px;
+            line-height: 1.6;
+            margin: 25px 0;
+            color: #2c3e50;
+        }
+        
+        .participant-name {
+            font-family: 'Dancing Script', cursive;
+            font-size: 48px;
+            font-weight: 700;
+            margin: 30px 0;
+            color: #2c3e50;
+            text-decoration: underline;
+            text-decoration-color: #d4af37;
+            text-underline-offset: 10px;
+            text-decoration-thickness: 3px;
+        }
+        
+        .certificate-details {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #ecf0f1;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+            font-size: 16px;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #7f8c8d;
+        }
+        
+        .detail-value {
+            font-weight: 400;
+            color: #2c3e50;
+        }
+        
+        .certificate-footer {
+            margin-top: 40px;
+            font-size: 14px;
+            color: #95a5a6;
+            text-align: center;
+        }
+        
+        .decorative-border {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            border: 5px solid #d4af37;
+            border-radius: 15px;
+            z-index: 0;
+        }
+        
+        .corner-decoration {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            z-index: 3;
+        }
+        
+        .corner-decoration::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #d4af37, #f1c40f);
+            clip-path: polygon(0 0, 100% 0, 0 100%);
+        }
+        
+        .corner-decoration.top-left {
+            top: 30px;
+            left: 30px;
+        }
+        
+        .corner-decoration.top-right {
+            top: 30px;
+            right: 30px;
+            transform: rotate(90deg);
+        }
+        
+        .corner-decoration.bottom-left {
+            bottom: 30px;
+            left: 30px;
+            transform: rotate(-90deg);
+        }
+        
+        .corner-decoration.bottom-right {
+            bottom: 30px;
+            right: 30px;
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="background-overlay"></div>
+    <div class="decorative-border"></div>
+    
+    <div class="corner-decoration top-left"></div>
+    <div class="corner-decoration top-right"></div>
+    <div class="corner-decoration bottom-left"></div>
+    <div class="corner-decoration bottom-right"></div>
+    
+    <div class="certificate-content">
+        <div class="certificate-header">
+            <h1 class="certificate-title">CERTIFICADO</h1>
+            <p class="certificate-subtitle">{{certificateName}}</p>
+        </div>
+        
+        <div class="certificate-text">Se otorga el presente certificado a:</div>
+        
+        <h2 class="participant-name">{{fullName}}</h2>
+        
+        <div class="certificate-text">Por su participación exitosa en:</div>
+        
+        <h3 class="event-name">{{eventName}}</h3>
+        
+        <div class="certificate-details">
+            <div class="detail-row">
+                <span class="detail-label">País:</span>
+                <span class="detail-value">{{country}}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Tipo de Documento:</span>
+                <span class="detail-value">{{documentType}}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Número de Documento:</span>
+                <span class="detail-value">{{documentNumber}}</span>
+            </div>
+        </div>
+        
+        <div class="certificate-footer">
+            Certificado generado automáticamente • {{certificateName}}
+        </div>
+    </div>
+</body>
+</html>
