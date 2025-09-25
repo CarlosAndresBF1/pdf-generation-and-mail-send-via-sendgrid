@@ -1,7 +1,23 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import { LoginUserDto } from '../dto/login-user.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { RefreshTokenDto } from '../dto/refresh-token.dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import type { AuthenticatedUser } from '../interfaces/auth.interfaces';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -11,17 +27,16 @@ export class AuthController {
   @Post('login')
   @ApiOperation({
     summary: 'Iniciar sesión',
-    description:
-      'Autentica un usuario y opcionalmente registra información de la plataforma y versión de la aplicación',
+    description: 'Autentica un usuario',
   })
   @ApiBody({
     type: LoginUserDto,
     examples: {
       ejemplo1: {
-        summary: 'Login con información de app iOS',
+        summary: 'Login con información de app',
         value: {
-          username: 'BD1051',
-          password: 'password123',
+          username: 'inmov_admin',
+          password: 'Inmov#123',
         },
       },
     },
@@ -56,13 +71,87 @@ export class AuthController {
       ? loginUserDto.username.toUpperCase()
       : '';
 
-    const user: any = await this.authService.validateUser(
+    const user = await this.authService.validateUser(
       loginUserDto.username,
       loginUserDto.password,
     );
 
-    const loginResult = await this.authService.login(user);
+    const loginResult = this.authService.login(user);
 
     return loginResult;
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Obtener usuario actual',
+    description: 'Obtiene la información del usuario autenticado',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Información del usuario autenticado',
+    schema: {
+      example: {
+        id: 123,
+        username: 'inmov_admin',
+        name: 'Carlos',
+        last_name: 'Beltran',
+        email: 'cbeltran@inmov.com',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token JWT inválido o no proporcionado',
+    schema: {
+      example: {
+        statusCode: 401,
+        message: 'Unauthorized',
+      },
+    },
+  })
+  getProfile(@Request() req: { user: AuthenticatedUser }): AuthenticatedUser {
+    return req.user;
+  }
+
+  @Post('refresh')
+  @ApiOperation({
+    summary: 'Renovar token de acceso',
+    description: 'Genera un nuevo access token usando un refresh token válido',
+  })
+  @ApiBody({
+    type: RefreshTokenDto,
+    examples: {
+      ejemplo1: {
+        summary: 'Refresh token example',
+        value: {
+          refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Tokens renovados exitosamente',
+    schema: {
+      example: {
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token inválido o expirado',
+    schema: {
+      example: {
+        statusCode: 401,
+        message: 'Refresh token inválido',
+      },
+    },
+  })
+  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+    return await this.authService.refresh(refreshTokenDto.refreshToken);
   }
 }

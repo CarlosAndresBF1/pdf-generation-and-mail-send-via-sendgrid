@@ -3,6 +3,13 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { UsersService } from 'src/users/services/users.service';
 import { DataSource } from 'typeorm';
+import {
+  JwtPayload,
+  LoginResponse,
+  RefreshResponse,
+  AuthenticatedUser,
+} from '../interfaces/auth.interfaces';
+import { User } from '../entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -12,7 +19,10 @@ export class AuthService {
     @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
-  async validateUser(username: string, password: string): Promise<any> {
+  async validateUser(
+    username: string,
+    password: string,
+  ): Promise<AuthenticatedUser> {
     // Encuentra el usuario por nombre de usuario
     const user = await this.usersService.findByUsername(username);
 
@@ -21,26 +31,66 @@ export class AuthService {
     }
 
     if (await this.usersService.comparePassword(password, user.password)) {
-      const { password, ...result } = user;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: userPassword, ...result } = user;
       return result;
     }
 
     throw new UnauthorizedException('Credenciales inválidas');
   }
 
-  async login(user: any): Promise<{ accessToken: string; user: any }> {
-    const payload = {
+  login(user: AuthenticatedUser): LoginResponse {
+    const payload: JwtPayload = {
       id: user.id,
       name: user.name,
-      last_name: user.last_name,
+      lastName: user.lastName,
       email: user.email,
-      username: user.username,
+      userName: user.userName,
     };
-    const accessToken = this.jwtService.sign(payload);
-    // Devuelve el token de acceso junto con los datos del usuario
+    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+
+    // Devuelve el token de acceso, refresh token y los datos del usuario
     return {
       accessToken,
+      refreshToken,
       user,
     };
+  }
+
+  async refresh(refreshToken: string): Promise<RefreshResponse> {
+    try {
+      // Verificar el refresh token
+      const payload = this.jwtService.verify(refreshToken) as any;
+
+      // Verificar que el usuario aún existe
+      const user = await this.usersService.findByUsername(payload.userName);
+      if (!user) {
+        throw new UnauthorizedException('Usuario no encontrado');
+      }
+
+      // Generar nuevos tokens
+      const newPayload: JwtPayload = {
+        id: user.id,
+        name: user.name,
+        lastName: user.lastName,
+        email: user.email,
+        userName: user.userName,
+      };
+
+      const newAccessToken = this.jwtService.sign(newPayload, {
+        expiresIn: '15m',
+      });
+      const newRefreshToken = this.jwtService.sign(newPayload, {
+        expiresIn: '7d',
+      });
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      };
+    } catch {
+      throw new UnauthorizedException('Refresh token inválido');
+    }
   }
 }

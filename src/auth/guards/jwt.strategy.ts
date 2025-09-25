@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
+import { JwtPayload, AuthenticatedUser } from '../interfaces/auth.interfaces';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -12,14 +13,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
+  validate(payload: JwtPayload): AuthenticatedUser {
     // El payload contiene los datos del token JWT
     return {
       id: payload.id,
       name: payload.name,
-      last_name: payload.last_name,
+      lastName: payload.lastName,
       email: payload.email,
-      username: payload.username,
+      userName: payload.userName,
     };
   }
 }
