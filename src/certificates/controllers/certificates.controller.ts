@@ -27,6 +27,10 @@ import { DesignImageService } from '../services/design-image.service';
 import { CreateCertificateDto } from '../dto/create-certificate.dto';
 import { UpdateCertificateDto } from '../dto/update-certificate.dto';
 import { UploadDesignImageResponseDto } from '../dto/upload-design-image.dto';
+import {
+  TestCertificateDto,
+  TestCertificateResponseDto,
+} from '../dto/test-certificate.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 @ApiTags('Certificates')
@@ -191,6 +195,33 @@ export class CertificatesController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<UploadDesignImageResponseDto> {
     return this.designImageService.uploadDesignImage(file);
+  }
+
+  @Post('test-certificate')
+  @ApiOperation({
+    summary: 'Send test certificate',
+    description:
+      'Generates and sends a test certificate via email without storing data in the database',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Test certificate sent successfully',
+    type: TestCertificateResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - validation errors',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Certificate configuration not found',
+  })
+  async sendTestCertificate(
+    @Body() testCertificateDto: TestCertificateDto,
+  ): Promise<TestCertificateResponseDto> {
+    return this.certificatesService.generateAndSendTestCertificate(
+      testCertificateDto,
+    );
   }
 
   @Delete(':id')

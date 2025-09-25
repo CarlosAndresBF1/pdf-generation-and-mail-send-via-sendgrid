@@ -15,6 +15,7 @@ describe('CertificatesController - Upload Design Image', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+    generateAndSendTestCertificate: jest.fn(),
   };
 
   const mockDesignImageService = {
@@ -146,6 +147,50 @@ describe('CertificatesController - Upload Design Image', () => {
       const result = await controller.uploadDesignImage(mockFile);
 
       expect(result).toEqual(expectedResult);
+    });
+  });
+
+  describe('sendTestCertificate', () => {
+    const testCertificateDto = {
+      certificateId: 1,
+      fullName: 'Juan Carlos Pérez',
+      documentNumber: '12345678',
+      email: 'juan@example.com',
+    };
+
+    const expectedResponse = {
+      message: 'Certificado de prueba enviado exitosamente a juan@example.com',
+      email: 'juan@example.com',
+      certificateId: 1,
+      sentAt: new Date(),
+    };
+
+    it('should send test certificate successfully', async () => {
+      mockCertificatesService.generateAndSendTestCertificate.mockResolvedValue(
+        expectedResponse,
+      );
+
+      const result = await controller.sendTestCertificate(testCertificateDto);
+
+      expect(result).toEqual(expectedResponse);
+      expect(
+        mockCertificatesService.generateAndSendTestCertificate,
+      ).toHaveBeenCalledWith(testCertificateDto);
+    });
+
+    it('should handle service errors', async () => {
+      const errorMessage = 'Certificate not found';
+      mockCertificatesService.generateAndSendTestCertificate.mockRejectedValue(
+        new BadRequestException(errorMessage),
+      );
+
+      await expect(
+        controller.sendTestCertificate(testCertificateDto),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(
+        mockCertificatesService.generateAndSendTestCertificate,
+      ).toHaveBeenCalledWith(testCertificateDto);
     });
   });
 });

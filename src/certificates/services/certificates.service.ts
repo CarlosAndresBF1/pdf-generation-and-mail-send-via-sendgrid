@@ -4,12 +4,20 @@ import { Repository } from 'typeorm';
 import { Certificate } from '../entities/certificate.entity';
 import { CreateCertificateDto } from '../dto/create-certificate.dto';
 import { UpdateCertificateDto } from '../dto/update-certificate.dto';
+import {
+  TestCertificateDto,
+  TestCertificateResponseDto,
+} from '../dto/test-certificate.dto';
+import { PdfGeneratorService } from '../../shared/services/pdf-generator.service';
+import { EmailService } from '../../shared/services/email.service';
 
 @Injectable()
 export class CertificatesService {
   constructor(
     @InjectRepository(Certificate)
     private readonly certificateRepository: Repository<Certificate>,
+    private readonly pdfGeneratorService: PdfGeneratorService,
+    private readonly emailService: EmailService,
   ) {}
 
   async create(
@@ -69,5 +77,53 @@ export class CertificatesService {
     const certificate = await this.findOne(id);
     certificate.isActive = !certificate.isActive;
     return await this.certificateRepository.save(certificate);
+  }
+
+  async generateAndSendTestCertificate(
+    testCertificateDto: TestCertificateDto,
+  ): Promise<TestCertificateResponseDto> {
+    const { certificateId, fullName, documentNumber, email } =
+      testCertificateDto;
+
+    // Verificar que existe la configuración del certificado
+    const certificate = await this.findOne(certificateId);
+
+    // Crear datos para el PDF (sin almacenar en BD)
+    const certificateData = {
+      fullName,
+      certificateName: certificate.name,
+      eventName: certificate.eventName,
+      baseDesignUrl: certificate.baseDesignUrl,
+      country: 'Test',
+      documentType: 'Test',
+      documentNumber,
+    };
+
+    // Generar PDF usando el servicio de PDF generator directamente
+    const pdfBuffer =
+      await this.pdfGeneratorService.generateCertificatePdf(certificateData);
+
+    // Generar nombre del archivo PDF
+    const pdfFilename = `${certificate.client}_${fullName.replace(/\s+/g, '_')}_certificate.pdf`;
+
+    // Enviar email con el PDF como adjunto
+    await this.emailService.sendCertificateEmail(
+      email,
+      fullName,
+      certificate.name,
+      certificate.eventName,
+      certificate.eventLink,
+      '#', // Download link placeholder para certificado de prueba
+      certificate.sendgridTemplateId,
+      pdfBuffer,
+      pdfFilename,
+    );
+
+    return {
+      message: `Certificado de prueba enviado exitosamente a ${email}`,
+      email,
+      certificateId,
+      sentAt: new Date(),
+    };
   }
 }
