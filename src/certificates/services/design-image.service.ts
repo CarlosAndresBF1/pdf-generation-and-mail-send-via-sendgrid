@@ -3,10 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 
 import { S3Service } from '../../shared/services/s3.service';
-import {
-  UploadDesignImageDto,
-  UploadDesignImageResponseDto,
-} from '../dto/upload-design-image.dto';
+import { UploadDesignImageResponseDto } from '../dto/upload-design-image.dto';
 
 @Injectable()
 export class DesignImageService {
@@ -32,7 +29,6 @@ export class DesignImageService {
    */
   async uploadDesignImage(
     file: Express.Multer.File,
-    uploadData: UploadDesignImageDto,
   ): Promise<UploadDesignImageResponseDto> {
     if (!file) {
       throw new BadRequestException('No se proporcionó ningún archivo');
@@ -53,23 +49,22 @@ export class DesignImageService {
     }
 
     // Generar key para S3
-    const key = this.generateDesignImageKey(file, uploadData);
+    const key = this.generateDesignImageKey(file);
 
     try {
-      // Subir a S3
-      const url = await this.s3Service.uploadFile(
+      // Subir a S3 y obtener URL del CDN
+      const s3Url = await this.s3Service.uploadFile(
         key,
         file.buffer,
         file.mimetype,
       );
 
+      // Construir URL del CDN
+      const cdnDomain = this.configService.get<string>('AWS_CDN_DOMAIN');
+      const cdnUrl = s3Url.replace(/^https:\/\/[^/]+\//, `${cdnDomain}/`);
+
       return {
-        url,
-        key,
-        originalName: file.originalname,
-        size: file.size,
-        mimeType: file.mimetype,
-        uploadedAt: new Date(),
+        url: cdnUrl,
       };
     } catch (error) {
       throw new BadRequestException(
@@ -92,51 +87,16 @@ export class DesignImageService {
   }
 
   /**
-   * Lista las imágenes de diseño disponibles (simulado - requeriría implementar listObjects en S3Service)
-   */
-  listDesignImages(_client?: string): Promise<string[]> {
-    // Esta funcionalidad requeriría implementar listObjects en S3Service
-    // Por ahora retornamos un array vacío como placeholder
-    return Promise.resolve([]);
-  }
-
-  /**
-   * Valida si una URL corresponde a una imagen de diseño válida
-   */
-  validateDesignImageUrl(url: string): boolean {
-    if (!url) return false;
-
-    // Verificar que la URL tenga el formato correcto
-    const cdnUrl = this.configService.get<string>('AWS_CDN_URL') || '';
-    if (!url.startsWith(cdnUrl)) return false;
-
-    // Verificar que esté en la carpeta correcta
-    const key = this.s3Service.extractKeyFromUrl(url);
-    return key.startsWith('certificates/design_images/');
-  }
-
-  /**
    * Genera la clave S3 para una imagen de diseño
    */
-  private generateDesignImageKey(
-    file: Express.Multer.File,
-    uploadData: UploadDesignImageDto,
-  ): string {
-    const year = new Date().getFullYear();
+  private generateDesignImageKey(file: Express.Multer.File): string {
     const uuid = uuidv4().substring(0, 8); // Solo primeros 8 caracteres
 
     // Obtener extensión del archivo
     const extension = this.getFileExtension(file.originalname);
 
-    // Sanitizar nombre del cliente si se proporciona
-    const clientPart = uploadData.client
-      ? `${this.sanitizeFilename(uploadData.client)}_${year}`
-      : `general_${year}`;
-
-    // Sanitizar nombre del archivo
-    const namePart = this.sanitizeFilename(uploadData.name);
-
-    return `certificates/design_images/${clientPart}/${namePart}_${uuid}${extension}`;
+    // Usar nombre genérico + UUID
+    return `certificates/design_images/design_${uuid}${extension}`;
   }
 
   /**
@@ -156,37 +116,5 @@ export class DesignImageService {
   private getFileExtension(filename: string): string {
     const lastDot = filename.lastIndexOf('.');
     return lastDot !== -1 ? filename.substring(lastDot) : '';
-  }
-
-  /**
-   * Extrae información de una URL de imagen de diseño
-   */
-  extractImageInfo(
-    url: string,
-  ): { client: string; year: string; filename: string } | null {
-    if (!this.validateDesignImageUrl(url)) {
-      return null;
-    }
-
-    const key = this.s3Service.extractKeyFromUrl(url);
-    const parts = key.split('/');
-
-    if (parts.length < 4) {
-      return null;
-    }
-
-    // certificates/design_images/client_year/filename
-    const clientYear = parts[2];
-    const filename = parts[3];
-
-    const clientYearParts = clientYear.split('_');
-    const year = clientYearParts[clientYearParts.length - 1];
-    const client = clientYearParts.slice(0, -1).join('_');
-
-    return {
-      client,
-      year,
-      filename,
-    };
   }
 }

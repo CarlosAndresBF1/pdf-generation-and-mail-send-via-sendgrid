@@ -5,7 +5,6 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CertificatesController } from './certificates.controller';
 import { CertificatesService } from '../services/certificates.service';
 import { DesignImageService } from '../services/design-image.service';
-import { UploadDesignImageDto } from '../dto/upload-design-image.dto';
 
 describe('CertificatesController - Upload Design Image', () => {
   let controller: CertificatesController;
@@ -59,36 +58,21 @@ describe('CertificatesController - Upload Design Image', () => {
       buffer: Buffer.from('test'),
     } as Express.Multer.File;
 
-    const mockUploadData: UploadDesignImageDto = {
-      name: 'Test Design',
-      description: 'Test description for design',
-      client: 'TestClient',
-    };
-
     it('should upload design image successfully', async () => {
       const expectedResult = {
-        url: 'https://cdn.example.com/certificates/design_images/testclient_2025/test-design_12345678.jpg',
-        key: 'certificates/design_images/testclient_2025/test-design_12345678.jpg',
-        originalName: 'test-design.jpg',
-        size: 1024000,
-        mimeType: 'image/jpeg',
-        uploadedAt: new Date(),
+        url: 'https://cdn.example.com/certificates/design_images/design_12345678.jpg',
       };
 
       mockDesignImageService.uploadDesignImage.mockResolvedValue(
         expectedResult,
       );
 
-      const result = await controller.uploadDesignImage(
-        mockFile,
-        mockUploadData,
-      );
+      const result = await controller.uploadDesignImage(mockFile);
 
       expect(result).toEqual(expectedResult);
 
       expect(mockDesignImageService.uploadDesignImage).toHaveBeenCalledWith(
         mockFile,
-        mockUploadData,
       );
     });
 
@@ -98,13 +82,12 @@ describe('CertificatesController - Upload Design Image', () => {
         new BadRequestException(errorMessage),
       );
 
-      await expect(
-        controller.uploadDesignImage(mockFile, mockUploadData),
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.uploadDesignImage(mockFile)).rejects.toThrow(
+        BadRequestException,
+      );
 
       expect(mockDesignImageService.uploadDesignImage).toHaveBeenCalledWith(
         mockFile,
-        mockUploadData,
       );
     });
 
@@ -114,9 +97,9 @@ describe('CertificatesController - Upload Design Image', () => {
         new BadRequestException(errorMessage),
       );
 
-      await expect(
-        controller.uploadDesignImage(null as never, mockUploadData),
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.uploadDesignImage(null as never)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should handle invalid file type', async () => {
@@ -130,9 +113,9 @@ describe('CertificatesController - Upload Design Image', () => {
         new BadRequestException(errorMessage),
       );
 
-      await expect(
-        controller.uploadDesignImage(invalidFile, mockUploadData),
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.uploadDesignImage(invalidFile)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should handle file too large', async () => {
@@ -146,34 +129,21 @@ describe('CertificatesController - Upload Design Image', () => {
         new BadRequestException(errorMessage),
       );
 
-      await expect(
-        controller.uploadDesignImage(largeFile, mockUploadData),
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.uploadDesignImage(largeFile)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should work without client parameter', async () => {
-      const uploadDataWithoutClient = {
-        name: 'Test Design',
-        description: 'Test description',
-      };
-
       const expectedResult = {
-        url: 'https://cdn.example.com/certificates/design_images/general_2025/test-design_12345678.jpg',
-        key: 'certificates/design_images/general_2025/test-design_12345678.jpg',
-        originalName: 'test-design.jpg',
-        size: 1024000,
-        mimeType: 'image/jpeg',
-        uploadedAt: new Date(),
+        url: 'https://cdn.example.com/certificates/design_images/design_12345678.jpg',
       };
 
       mockDesignImageService.uploadDesignImage.mockResolvedValue(
         expectedResult,
       );
 
-      const result = await controller.uploadDesignImage(
-        mockFile,
-        uploadDataWithoutClient,
-      );
+      const result = await controller.uploadDesignImage(mockFile);
 
       expect(result).toEqual(expectedResult);
     });

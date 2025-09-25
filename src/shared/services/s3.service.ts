@@ -28,8 +28,8 @@ export class S3Service {
       },
     });
 
-    this.bucketName = this.configService.get<string>('AWS_S3_BUCKET') || '';
-    this.cdnUrl = this.configService.get<string>('AWS_CDN_URL') || '';
+    this.bucketName = this.configService.get<string>('AWS_BUCKET_NAME') || '';
+    this.cdnUrl = this.configService.get<string>('AWS_CDN_DOMAIN') || '';
   }
 
   async uploadFile(

@@ -26,10 +26,7 @@ import { CertificatesService } from '../services/certificates.service';
 import { DesignImageService } from '../services/design-image.service';
 import { CreateCertificateDto } from '../dto/create-certificate.dto';
 import { UpdateCertificateDto } from '../dto/update-certificate.dto';
-import {
-  UploadDesignImageDto,
-  UploadDesignImageResponseDto,
-} from '../dto/upload-design-image.dto';
+import { UploadDesignImageResponseDto } from '../dto/upload-design-image.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 @ApiTags('Certificates')
@@ -167,7 +164,8 @@ export class CertificatesController {
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: 'Image file upload with metadata',
+    description: 'Upload design image',
+    type: 'multipart/form-data',
     schema: {
       type: 'object',
       properties: {
@@ -176,23 +174,8 @@ export class CertificatesController {
           format: 'binary',
           description: 'Image file (JPEG, PNG, WebP, SVG)',
         },
-        name: {
-          type: 'string',
-          description: 'Nombre descriptivo para la imagen',
-          example: 'Summit 2025 - Diseño Principal',
-        },
-        description: {
-          type: 'string',
-          description: 'Descripción adicional de la imagen',
-          example: 'Diseño base para certificados del Summit 2025',
-        },
-        client: {
-          type: 'string',
-          description: 'Cliente al que pertenece el diseño',
-          example: 'Nestlé',
-        },
       },
-      required: ['image', 'name'],
+      required: ['image'],
     },
   })
   @ApiResponse({
@@ -206,9 +189,8 @@ export class CertificatesController {
   })
   async uploadDesignImage(
     @UploadedFile() file: Express.Multer.File,
-    @Body() uploadData: UploadDesignImageDto,
   ): Promise<UploadDesignImageResponseDto> {
-    return this.designImageService.uploadDesignImage(file, uploadData);
+    return this.designImageService.uploadDesignImage(file);
   }
 
   @Delete(':id')
