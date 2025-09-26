@@ -7,11 +7,13 @@ import {
   ManyToOne,
   JoinColumn,
   OneToOne,
+  Unique,
 } from 'typeorm';
 import { Certificate } from '../../certificates/entities/certificate.entity';
 import { Attendee } from '../../attendees/entities/attendee.entity';
 
 @Entity('generated_certificates')
+@Unique(['certificateId', 'attendeeId'])
 export class GeneratedCertificate {
   @PrimaryGeneratedColumn()
   id: number;

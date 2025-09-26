@@ -13,6 +13,7 @@ import { FileProcessingService } from '../attendees/services/file-processing.ser
 import { EmailService } from '../shared/services/email.service';
 import { S3Service } from '../shared/services/s3.service';
 import { PdfGeneratorService } from '../shared/services/pdf-generator.service';
+import { GeneratedCertificatesService } from '../generated-certificates/services/generated-certificates.service';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { PdfGeneratorService } from '../shared/services/pdf-generator.service';
     EmailService,
     S3Service,
     PdfGeneratorService,
+    GeneratedCertificatesService,
   ],
   exports: [JobsService, JobSchedulerService, BulkUploadJobsService],
 })

@@ -273,4 +273,64 @@ export class GeneratedCertificatesService {
       message: `Processed pending certificates: ${jobsCreated} jobs created, ${alreadyProcessed} already had jobs`,
     };
   }
+
+  /**
+   * Procesa certificados pendientes en lotes para evitar timeouts
+   * Usado por el job cron para procesar miles de registros
+   */
+  async processPendingCertificatesBatch(batchSize: number = 50): Promise<{
+    success: boolean;
+    data: {
+      totalCertificates: number;
+      jobsCreated: number;
+      alreadyProcessed: number;
+    };
+    message: string;
+  }> {
+    // Get a limited batch of certificates that don't have an associated job
+    const certificatesWithoutJobs = await this.generatedCertificateRepository
+      .createQueryBuilder('gc')
+      .leftJoin('jobs', 'j', 'j.generated_certificate_id = gc.id')
+      .where('j.id IS NULL')
+      .limit(batchSize)
+      .getMany();
+
+    let jobsCreated = 0;
+    let alreadyProcessed = 0;
+
+    // Create jobs for certificates without jobs
+    for (const certificate of certificatesWithoutJobs) {
+      try {
+        // Double-check that no job exists (race condition protection)
+        const existingJob = await this.jobRepository.findOne({
+          where: { generatedCertificateId: certificate.id },
+        });
+
+        if (existingJob) {
+          alreadyProcessed++;
+          continue;
+        }
+
+        // Create new job
+        await this.createEmailJob(certificate.id);
+        jobsCreated++;
+      } catch (error) {
+        console.error(
+          `Error creating job for certificate ${certificate.id}:`,
+          error,
+        );
+        // Continue processing other certificates even if one fails
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        totalCertificates: certificatesWithoutJobs.length,
+        jobsCreated,
+        alreadyProcessed,
+      },
+      message: `Processed batch: ${jobsCreated} jobs created, ${alreadyProcessed} already had jobs`,
+    };
+  }
 }

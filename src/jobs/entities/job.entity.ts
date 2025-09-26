@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   OneToOne,
   JoinColumn,
+  Unique,
 } from 'typeorm';
 import { GeneratedCertificate } from '../../generated-certificates/entities/generated-certificate.entity';
 
@@ -15,6 +16,7 @@ export enum JobStatus {
 }
 
 @Entity('jobs')
+@Unique(['generatedCertificateId'])
 export class Job {
   @PrimaryGeneratedColumn()
   id: number;

@@ -118,13 +118,13 @@ export class GeneratedCertificatesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('jwt-auth')
   @ApiOperation({
-    summary: 'Process all certificates without email jobs',
+    summary: 'Create email jobs for certificates without jobs',
     description:
-      'Automatically identifies all generated certificates in the system that do not have associated email jobs and creates jobs for them. This is a comprehensive cleanup operation that ensures no certificate is left without an email delivery job. Uses advanced database queries with LEFT JOIN to efficiently find certificates without jobs, includes race condition protection, and provides detailed reporting of processed certificates. Perfect for batch processing after bulk certificate generation or system maintenance.',
+      'Creates email jobs for all generated certificates that do not have associated email jobs. This endpoint processes the certificates synchronously and creates the necessary jobs in the database. The created jobs will then be processed by the background job scheduler. Returns statistics about how many jobs were created vs how many certificates already had jobs.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Pending certificates processed successfully',
+    description: 'Jobs created successfully for pending certificates',
     schema: {
       type: 'object',
       properties: {
@@ -146,6 +146,45 @@ export class GeneratedCertificatesController {
     },
   })
   processPendingCertificates() {
+    return this.generatedCertificatesService.processPendingCertificates();
+  }
+
+  @Post('process-pending/force')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('jwt-auth')
+  @ApiOperation({
+    summary: 'Force immediate processing of pending certificates (EMERGENCY)',
+    description:
+      'Forces immediate synchronous processing of pending certificates. WARNING: This endpoint may timeout with large datasets. Use only in emergency situations or when you are certain there are few pending certificates. For normal operations, use the standard process-pending endpoint which schedules background processing.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending certificates processed immediately',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            totalCertificates: { type: 'number', example: 10 },
+            jobsCreated: { type: 'number', example: 8 },
+            alreadyProcessed: { type: 'number', example: 2 },
+          },
+        },
+        message: {
+          type: 'string',
+          example:
+            'Processed pending certificates: 8 jobs created, 2 already had jobs',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 504,
+    description: 'Request timeout - too many pending certificates',
+  })
+  forceProcessPendingCertificates() {
     return this.generatedCertificatesService.processPendingCertificates();
   }
 
