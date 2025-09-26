@@ -55,7 +55,6 @@ pids
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
-.github/instructions/
+/.github/instructions/
 *.ts.backup*
 /IA_context
-.github/instructions/project-context.md
