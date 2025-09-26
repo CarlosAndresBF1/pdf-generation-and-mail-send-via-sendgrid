@@ -85,59 +85,88 @@ export class GeneratedCertificatesService {
           continue;
         }
 
-        // Generate PDF
-        const certificateData = {
-          fullName: attendee.fullName,
-          certificateName: certificate.name,
-          eventName: certificate.eventName,
-          baseDesignUrl: certificate.baseDesignUrl,
-          country: attendee.country || '',
-          documentType: attendee.documentType || '',
-          documentNumber: attendee.documentNumber || '',
-        };
+        let pdfBuffer: Buffer;
+        let s3Url: string;
 
-        const pdfBuffer = await this.pdfGeneratorService.generateCertificatePdf(
-          certificateData,
-          certificate.pdfTemplate,
-        );
+        try {
+          const certificateData = {
+            fullName: attendee.fullName,
+            certificateName: certificate.name,
+            eventName: certificate.eventName,
+            baseDesignUrl: certificate.baseDesignUrl,
+            country: attendee.country || '',
+            documentType: attendee.documentType || '',
+            documentNumber: attendee.documentNumber || '',
+          };
 
-        // Upload to S3
-        const s3Key = this.s3Service.generateCertificateKey(
-          certificate.client,
-          new Date().getFullYear(),
-          certificate.id,
-          certificate.name,
-          attendee.fullName,
-        );
-
-        const s3Url = await this.s3Service.uploadFile(
-          s3Key,
-          pdfBuffer,
-          'application/pdf',
-        );
-
-        // Save to database
-        const generatedCertificate = this.generatedCertificateRepository.create(
-          {
-            certificateId: certificate.id,
-            attendeeId: attendee.id,
-            s3Url,
-            generatedAt: new Date(),
-            isSent: false,
-          },
-        );
-
-        const saved =
-          await this.generatedCertificateRepository.save(generatedCertificate);
-
-        // Create job for email sending if requested
-        if (dto.sendEmails) {
-          await this.createEmailJob(saved.id);
+          pdfBuffer = await this.pdfGeneratorService.generateCertificatePdf(
+            certificateData,
+            certificate.pdfTemplate,
+          );
+        } catch (pdfError) {
+          // Skip this attendee - don't create DB record or job if PDF fails
+          continue;
         }
 
-        results.push(saved);
+        try {
+          // Upload to S3
+          const s3Key = this.s3Service.generateCertificateKey(
+            certificate.client,
+            new Date().getFullYear(),
+            certificate.id,
+            certificate.name,
+            attendee.fullName,
+          );
+
+          s3Url = await this.s3Service.uploadFile(
+            s3Key,
+            pdfBuffer,
+            'application/pdf',
+          );
+        } catch (s3Error) {
+          console.error(
+            `❌ S3 upload failed for ${attendee.fullName}:`,
+            s3Error,
+          );
+          // Skip this attendee - don't create DB record or job if S3 upload fails
+          continue;
+        }
+
+        try {
+          // Save to database only if PDF generation and S3 upload succeeded
+          const generatedCertificate =
+            this.generatedCertificateRepository.create({
+              certificateId: certificate.id,
+              attendeeId: attendee.id,
+              s3Url,
+              generatedAt: new Date(),
+              isSent: false,
+            });
+
+          const saved =
+            await this.generatedCertificateRepository.save(
+              generatedCertificate,
+            );
+
+          // Create job for email sending if requested (only if PDF was successfully generated)
+          if (dto.sendEmails) {
+            await this.createEmailJob(saved.id);
+          }
+
+          results.push(saved);
+        } catch (dbError) {
+          console.error(
+            `❌ Database save failed for ${attendee.fullName}:`,
+            dbError,
+          );
+          // Continue with next attendee
+        }
       } catch (error) {
-        console.error('Error generating certificate:', error);
+        console.error(
+          `❌ Unexpected error generating certificate for ${attendee.fullName}:`,
+          error,
+        );
+        // Continue with next attendee
       }
     }
 
@@ -222,9 +251,19 @@ export class GeneratedCertificatesService {
       documentNumber: generatedCert.attendee.documentNumber || '',
     };
 
-    return await this.pdfGeneratorService.generateCertificatePdf(
-      certificateData,
-    );
+    try {
+      const pdfBuffer =
+        await this.pdfGeneratorService.generateCertificatePdf(certificateData);
+      return pdfBuffer;
+    } catch (pdfError) {
+      console.error(
+        `❌ PDF regeneration failed for certificate ${id}:`,
+        pdfError,
+      );
+      throw new Error(
+        `Failed to regenerate PDF certificate: ${pdfError instanceof Error ? pdfError.message : 'Unknown PDF error'}`,
+      );
+    }
   }
 
   async processPendingCertificates(): Promise<{

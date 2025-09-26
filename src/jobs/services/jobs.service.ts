@@ -92,63 +92,92 @@ export class JobsService {
       const { generatedCertificate } = job;
       const { certificate, attendee } = generatedCertificate;
 
-      // Generar PDF usando el método unificado
-      const pdfBuffer =
-        await this.generateCertificatePdfBuffer(generatedCertificate);
+      let pdfBuffer: Buffer;
+      let s3Url: string;
 
-      // Subir PDF a S3 usando la misma lógica que el proceso inicial
-      const s3Key = this.s3Service.generateCertificateKey(
-        certificate.client,
-        new Date().getFullYear(),
-        certificate.id,
-        certificate.name,
-        attendee.fullName,
-      );
+      try {
+        // Generar PDF usando el método unificado
+        pdfBuffer =
+          await this.generateCertificatePdfBuffer(generatedCertificate);
 
-      const s3Url = await this.s3Service.uploadFile(
-        s3Key,
-        pdfBuffer,
-        'application/pdf',
-      );
+        // Subir PDF a S3 usando la misma lógica que el proceso inicial
+        const s3Key = this.s3Service.generateCertificateKey(
+          certificate.client,
+          new Date().getFullYear(),
+          certificate.id,
+          certificate.name,
+          attendee.fullName,
+        );
 
-      // Actualizar la URL de S3 en el certificado generado
-      generatedCertificate.s3Url = s3Url;
+        s3Url = await this.s3Service.uploadFile(
+          s3Key,
+          pdfBuffer,
+          'application/pdf',
+        );
 
-      // Prepare email data
-      const downloadLink = `${this.configService.get<string>('APP_URL') || 'http://localhost:3000'}/certificate/${generatedCertificate.id}/download`;
+        // Actualizar la URL de S3 en el certificado generado
+        generatedCertificate.s3Url = s3Url;
+      } catch (pdfError) {
+        console.error(
+          `❌ PDF generation failed for certificate ${generatedCertificate.id}:`,
+          pdfError,
+        );
 
-      // Send email with custom sender from certificate
-      await this.emailService.sendCertificateEmail(
-        attendee.email,
-        attendee.fullName,
-        certificate.name,
-        certificate.eventName,
-        certificate.eventLink,
-        downloadLink,
-        certificate.sendgridTemplateId,
-        pdfBuffer,
-        `${attendee.fullName.replace(/[^a-zA-Z0-9]/g, '_')}_certificate.pdf`,
-        certificate.senderEmail, // Custom sender email from certificate
-        certificate.emailSubject, // Custom subject from certificate
-        certificate.senderFromName, // Custom sender name from certificate
-      );
+        // Mark job as error specifically for PDF generation failure
+        job.status = JobStatus.ERROR;
+        job.errorMessage = `PDF generation failed: ${pdfError instanceof Error ? pdfError.message : 'Unknown PDF error'}`;
 
-      // Update job status
-      job.status = JobStatus.SENT;
-      generatedCertificate.isSent = true;
+        await this.jobRepository.save(job);
+        return; // Exit early - do not attempt to send email
+      }
 
-      // Save both job and generated certificate
-      await Promise.all([
-        this.jobRepository.save(job),
-        this.generatedCertificateRepository.save(generatedCertificate),
-      ]);
-      /*console.log(
-        `Email sent successfully for certificate ${generatedCertificate.id}`,
-      );*/
+      try {
+        // Prepare email data
+        const downloadLink = `${this.configService.get<string>('APP_URL') || 'http://localhost:3000'}/certificate/${generatedCertificate.id}/download`;
+
+        // Send email with custom sender from certificate
+        await this.emailService.sendCertificateEmail(
+          attendee.email,
+          attendee.fullName,
+          certificate.name,
+          certificate.eventName,
+          certificate.eventLink,
+          downloadLink,
+          certificate.sendgridTemplateId,
+          pdfBuffer,
+          `${attendee.fullName.replace(/[^a-zA-Z0-9]/g, '_')}_certificate.pdf`,
+          certificate.senderEmail, // Custom sender email from certificate
+          certificate.emailSubject, // Custom subject from certificate
+          certificate.senderFromName, // Custom sender name from certificate
+        );
+
+        // Update job status only if email was sent successfully
+        job.status = JobStatus.SENT;
+        generatedCertificate.isSent = true;
+
+        // Save both job and generated certificate
+        await Promise.all([
+          this.jobRepository.save(job),
+          this.generatedCertificateRepository.save(generatedCertificate),
+        ]);
+      } catch (emailError) {
+        console.error(
+          `❌ Email sending failed for certificate ${generatedCertificate.id}:`,
+          emailError,
+        );
+
+        // Mark job as error specifically for email sending failure
+        // Note: PDF was generated successfully, so S3 URL is preserved
+        job.status = JobStatus.ERROR;
+        job.errorMessage = `Email sending failed: ${emailError instanceof Error ? emailError.message : 'Unknown email error'}`;
+
+        await this.jobRepository.save(job);
+        return;
+      }
     } catch (error) {
-      console.error(`Error processing job ${job.id}:`, error);
+      console.error(`❌ Unexpected error processing job ${job.id}:`, error);
 
-      // Update job with error
+      // Update job with general error
       job.status = JobStatus.ERROR;
       job.errorMessage =
         error instanceof Error ? error.message : 'Unknown error occurred';
@@ -240,5 +269,151 @@ export class JobsService {
         attemptedAt: undefined,
       },
     );
+  }
+
+  /**
+   * Audita los jobs marcados como SENT vs archivos reales en S3
+   * Identifica correos que se enviaron sin adjunto PDF
+   */
+  async auditJobsVsS3(): Promise<{
+    totalSentJobs: number;
+    jobsWithValidPdfs: number;
+    jobsWithMissingPdfs: number;
+    missingPdfJobs: Array<{
+      jobId: number;
+      certificateId: number;
+      attendeeName: string;
+      attendeeEmail: string;
+      s3Url: string;
+      s3Key: string;
+      attemptedAt: Date;
+    }>;
+  }> {
+    // Get all jobs marked as SENT
+    const sentJobs = await this.jobRepository.find({
+      where: { status: JobStatus.SENT },
+      relations: ['generatedCertificate', 'generatedCertificate.attendee'],
+    });
+
+    let jobsWithValidPdfs = 0;
+    const missingPdfJobs: Array<{
+      jobId: number;
+      certificateId: number;
+      attendeeName: string;
+      attendeeEmail: string;
+      s3Url: string;
+      s3Key: string;
+      attemptedAt: Date;
+    }> = [];
+
+    // Check each SENT job to see if its PDF exists in S3
+    for (const job of sentJobs) {
+      const { generatedCertificate } = job;
+      if (!generatedCertificate || !generatedCertificate.s3Url) {
+        console.log(`⚠️  Job ${job.id} has no S3 URL`);
+        continue;
+      }
+
+      const s3Key = this.s3Service.extractKeyFromUrl(
+        generatedCertificate.s3Url,
+      );
+
+      try {
+        const fileExists = await this.s3Service.fileExists(s3Key);
+
+        if (fileExists) {
+          jobsWithValidPdfs++;
+        } else {
+          console.log(
+            `❌ Missing PDF for job ${job.id}: ${generatedCertificate.attendee.fullName}`,
+          );
+          missingPdfJobs.push({
+            jobId: job.id,
+            certificateId: generatedCertificate.certificateId,
+            attendeeName: generatedCertificate.attendee.fullName,
+            attendeeEmail: generatedCertificate.attendee.email,
+            s3Url: generatedCertificate.s3Url,
+            s3Key,
+            attemptedAt: job.attemptedAt || new Date(),
+          });
+        }
+      } catch (error) {
+        console.error(`Error checking S3 file for job ${job.id}:`, error);
+        missingPdfJobs.push({
+          jobId: job.id,
+          certificateId: generatedCertificate.certificateId,
+          attendeeName: generatedCertificate.attendee.fullName,
+          attendeeEmail: generatedCertificate.attendee.email,
+          s3Url: generatedCertificate.s3Url,
+          s3Key,
+          attemptedAt: job.attemptedAt || new Date(),
+        });
+      }
+    }
+
+    return {
+      totalSentJobs: sentJobs.length,
+      jobsWithValidPdfs,
+      jobsWithMissingPdfs: missingPdfJobs.length,
+      missingPdfJobs,
+    };
+  }
+
+  /**
+   * Reprocesa jobs que se enviaron sin PDF adjunto
+   * Marca los jobs como PENDING para que se procesen nuevamente
+   */
+  async retryJobsWithMissingPdfs(jobIds: number[]): Promise<{
+    success: boolean;
+    retriedJobs: number;
+    skippedJobs: number;
+    message: string;
+  }> {
+    let retriedJobs = 0;
+    let skippedJobs = 0;
+
+    for (const jobId of jobIds) {
+      try {
+        const job = await this.jobRepository.findOne({
+          where: { id: jobId, status: JobStatus.SENT },
+          relations: ['generatedCertificate'],
+        });
+
+        if (!job) {
+          console.log(`⚠️  Job ${jobId} not found or not SENT`);
+          skippedJobs++;
+          continue;
+        }
+
+        // Reset job to PENDING status
+        job.status = JobStatus.PENDING;
+        job.errorMessage = undefined;
+        job.attemptedAt = undefined;
+
+        // Mark the generated certificate as not sent
+        if (job.generatedCertificate) {
+          job.generatedCertificate.isSent = false;
+          await this.generatedCertificateRepository.save(
+            job.generatedCertificate,
+          );
+        }
+
+        await this.jobRepository.save(job);
+        retriedJobs++;
+      } catch (error) {
+        console.error(`❌ Error retrying job ${jobId}:`, error);
+        skippedJobs++;
+      }
+    }
+
+    const message = `Retry completed: ${retriedJobs} jobs reset to PENDING, ${skippedJobs} skipped`;
+    console.log(`${message}`);
+
+    return {
+      success: true,
+      retriedJobs,
+      skippedJobs,
+      message,
+    };
   }
 }

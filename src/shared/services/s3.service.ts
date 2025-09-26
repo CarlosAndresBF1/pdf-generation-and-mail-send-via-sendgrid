@@ -5,6 +5,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3';
 
 @Injectable()
@@ -99,5 +100,25 @@ export class S3Service {
   extractKeyFromUrl(url: string): string {
     // Extract key from CDN URL
     return url.replace(`${this.cdnUrl}/`, '');
+  }
+
+  async fileExists(key: string): Promise<boolean> {
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+
+      await this.s3Client.send(command);
+      return true;
+    } catch {
+      // If error is NoSuchKey or similar, file doesn't exist
+      return false;
+    }
+  }
+
+  async downloadFile(url: string): Promise<Buffer> {
+    const key = this.extractKeyFromUrl(url);
+    return await this.getFile(key);
   }
 }

@@ -43,9 +43,10 @@ export class PdfGeneratorService {
       certificateData,
     );
 
-    // Generate PDF using Puppeteer
+    // Generate PDF using Puppeteer with Docker Alpine optimized settings
     const browser = await puppeteer.launch({
       headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -60,7 +61,20 @@ export class PdfGeneratorService {
         '--disable-renderer-backgrounding',
         '--disable-features=TranslateUI',
         '--disable-ipc-flooding-protection',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--disable-default-apps',
+        '--no-default-browser-check',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-sync',
+        '--disable-background-networking',
+        '--disable-software-rasterizer',
+        ...(process.env.PUPPETEER_ARGS
+          ? process.env.PUPPETEER_ARGS.split(' ')
+          : []),
       ],
+      timeout: 30000, // 30 seconds timeout for browser launch
     });
 
     try {

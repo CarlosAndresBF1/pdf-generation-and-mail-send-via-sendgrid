@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   UseGuards,
   Request,
+  Body,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,6 +20,7 @@ import { JobSchedulerService } from '../services/job-scheduler.service';
 import { BulkUploadJobsService } from '../services/bulk-upload-jobs.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { BulkUploadJob } from '../entities/bulk-upload-job.entity';
+import { RetryJobsDto } from '../dto/retry-jobs.dto';
 
 @ApiTags('Jobs')
 @Controller('jobs')
@@ -219,5 +221,78 @@ export class JobsController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<BulkUploadJob> {
     return this.bulkUploadJobsService.findOne(id);
+  }
+
+  // Audit and Repair Endpoints
+
+  @Get('audit/missing-pdfs')
+  @ApiOperation({
+    summary: 'Audit SENT jobs to find emails sent without PDF attachments',
+    description:
+      'Compares all jobs marked as SENT with the actual PDF files in S3 storage. Identifies discrepancies where emails were sent successfully but the PDF attachment was missing or failed to generate. This is crucial for data integrity and ensuring all recipients received their complete certificates. Returns detailed information about jobs that need to be re-sent.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Audit completed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        totalSentJobs: { type: 'number' },
+        jobsWithValidPdfs: { type: 'number' },
+        jobsWithMissingPdfs: { type: 'number' },
+        missingPdfJobs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              jobId: { type: 'number' },
+              certificateId: { type: 'number' },
+              attendeeName: { type: 'string' },
+              attendeeEmail: { type: 'string' },
+              s3Url: { type: 'string' },
+              s3Key: { type: 'string' },
+              attemptedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+    },
+  })
+  async auditMissingPdfs() {
+    return await this.jobsService.auditJobsVsS3();
+  }
+
+  @Post('repair/retry-missing-pdfs')
+  @ApiOperation({
+    summary: 'Retry jobs that were sent without PDF attachments',
+    description:
+      'Resets specific jobs back to PENDING status so they can be reprocessed with proper PDF generation and email delivery. Use this endpoint after running the audit to fix jobs that were sent without attachments. The jobs will be picked up by the next processing cycle and will attempt to generate PDFs before sending emails.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Retry operation completed',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        retriedJobs: { type: 'number' },
+        skippedJobs: { type: 'number' },
+        message: { type: 'string' },
+      },
+    },
+  })
+  async retryMissingPdfs(@Body() retryJobsDto: RetryJobsDto) {
+    const { jobIds } = retryJobsDto;
+
+    if (!Array.isArray(jobIds) || jobIds.length === 0) {
+      return {
+        success: false,
+        retriedJobs: 0,
+        skippedJobs: 0,
+        message: 'No job IDs provided. Send jobIds array in request body.',
+      };
+    }
+
+    return await this.jobsService.retryJobsWithMissingPdfs(jobIds);
   }
 }

@@ -99,30 +99,44 @@ export class CertificatesService {
       documentNumber,
     };
 
-    // Generar PDF usando el servicio de PDF generator directamente
-    const pdfBuffer = await this.pdfGeneratorService.generateCertificatePdf(
-      certificateData,
-      certificate.pdfTemplate,
-    );
+    let pdfBuffer: Buffer;
+    let pdfFilename: string;
 
-    // Generar nombre del archivo PDF
-    const pdfFilename = `${certificate.client}_${fullName.replace(/\s+/g, '_')}_certificate.pdf`;
+    try {
+      pdfBuffer = await this.pdfGeneratorService.generateCertificatePdf(
+        certificateData,
+        certificate.pdfTemplate,
+      );
 
-    // Enviar email con el PDF como adjunto
-    await this.emailService.sendCertificateEmail(
-      email,
-      fullName,
-      certificate.name,
-      certificate.eventName,
-      certificate.eventLink,
-      '#',
-      certificate.sendgridTemplateId,
-      pdfBuffer,
-      pdfFilename,
-      certificate.senderEmail,
-      certificate.emailSubject,
-      certificate.senderFromName,
-    );
+      // Generar nombre del archivo PDF
+      pdfFilename = `${certificate.client}_${fullName.replace(/\s+/g, '_')}_certificate.pdf`;
+    } catch (pdfError) {
+      throw new Error(
+        `Failed to generate PDF certificate: ${pdfError instanceof Error ? pdfError.message : 'Unknown PDF error'}`,
+      );
+    }
+
+    try {
+      // Enviar email con el PDF como adjunto
+      await this.emailService.sendCertificateEmail(
+        email,
+        fullName,
+        certificate.name,
+        certificate.eventName,
+        certificate.eventLink,
+        '#',
+        certificate.sendgridTemplateId,
+        pdfBuffer,
+        pdfFilename,
+        certificate.senderEmail,
+        certificate.emailSubject,
+        certificate.senderFromName,
+      );
+    } catch (emailError) {
+      throw new Error(
+        `Failed to send email: ${emailError instanceof Error ? emailError.message : 'Unknown email error'}`,
+      );
+    }
 
     return {
       message: `Certificado de prueba enviado exitosamente a ${email}`,
