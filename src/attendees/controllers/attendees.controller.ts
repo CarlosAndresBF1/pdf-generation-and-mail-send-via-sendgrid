@@ -10,6 +10,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -27,6 +28,8 @@ import { UpdateAttendeeDto } from '../dto/update-attendee.dto';
 import { BulkUploadResponseDto } from '../dto/bulk-upload-attendee.dto';
 import { FileProcessingService } from '../services/file-processing.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { BulkUploadJobsService } from '../../jobs/services/bulk-upload-jobs.service';
+import { BulkUploadJob } from '../../jobs/entities/bulk-upload-job.entity';
 
 @ApiTags('Attendees')
 @Controller('attendees')
@@ -36,6 +39,7 @@ export class AttendeesController {
   constructor(
     private readonly attendeesService: AttendeesService,
     private readonly fileProcessingService: FileProcessingService,
+    private readonly bulkUploadJobsService: BulkUploadJobsService,
   ) {}
 
   @Post()
@@ -149,9 +153,9 @@ export class AttendeesController {
   @Post('bulk-upload')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({
-    summary: 'Upload attendees from file',
+    summary: 'Create bulk upload job',
     description:
-      'Upload and process attendees from CSV or Excel file with optional certificate association',
+      'Creates an asynchronous job to process CSV or Excel file with attendee data and optional certificate association',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -169,8 +173,8 @@ export class AttendeesController {
   })
   @ApiResponse({
     status: 201,
-    description: 'File processed successfully',
-    type: BulkUploadResponseDto,
+    description: 'Bulk upload job created successfully',
+    type: BulkUploadJob,
   })
   @ApiResponse({
     status: 400,
@@ -178,8 +182,13 @@ export class AttendeesController {
   })
   async bulkUpload(
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<BulkUploadResponseDto> {
-    return this.fileProcessingService.processFile(file);
+    @Request() req: any,
+  ): Promise<BulkUploadJob> {
+    return this.bulkUploadJobsService.createJob(
+      file.originalname,
+      Number(req.user.id),
+      file,
+    );
   }
 
   @Delete(':id')

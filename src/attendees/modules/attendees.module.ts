@@ -6,10 +6,12 @@ import { GeneratedCertificate } from '../../generated-certificates/entities/gene
 import { AttendeesService } from '../services/attendees.service';
 import { FileProcessingService } from '../services/file-processing.service';
 import { AttendeesController } from '../controllers/attendees.controller';
+import { JobsModule } from '../../jobs/jobs.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Attendee, Certificate, GeneratedCertificate]),
+    JobsModule,
   ],
   controllers: [AttendeesController],
   providers: [AttendeesService, FileProcessingService],

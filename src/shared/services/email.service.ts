@@ -35,7 +35,6 @@ export class EmailService {
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       this.sgMail = require('@sendgrid/mail');
-      // Use MAIL_API_KEY which contains the SendGrid API Key
       const apiKey = this.configService.get<string>('MAIL_API_KEY');
       if (apiKey) {
         this.sgMail.setApiKey(apiKey);

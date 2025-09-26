@@ -251,7 +251,7 @@ export class FileProcessingService {
 
         // Si hay certificateId, verificar primero si ya existe la asociación
         if (attendeeDto.certificateId) {
-          // Buscar si ya existe un certificado generado para este email/documento y certificado
+          // Buscar si ya existe un certificado generado para este email Y documento y certificado
           const existingCertificate = await this.generatedCertificateRepository
             .createQueryBuilder('gc')
             .innerJoin('gc.attendee', 'a')
@@ -259,7 +259,7 @@ export class FileProcessingService {
               certificateId: attendeeDto.certificateId,
             })
             .andWhere(
-              '(a.email = :email OR a.document_number = :documentNumber)',
+              '(a.email = :email AND a.document_number = :documentNumber)',
               {
                 email: attendeeDto.email,
                 documentNumber: attendeeDto.documentNumber,
@@ -268,12 +268,12 @@ export class FileProcessingService {
             .getOne();
 
           if (existingCertificate) {
-            // Ya existe un certificado para esta persona y este certificado específico
+            // Ya existe un certificado para esta persona exacta (mismo email Y documento) y este certificado específico
             response.errorDetails.push({
               row: rowNumber,
               data: rowData,
               errors: [
-                `Ya existe un certificado generado para este email/documento en el certificado ${attendeeDto.certificateId}`,
+                `Ya existe un certificado generado para este email Y documento en el certificado ${attendeeDto.certificateId}`,
               ],
             });
             response.errors++;
@@ -281,12 +281,12 @@ export class FileProcessingService {
           }
         }
 
-        // Buscar attendee existente por email o documento
+        // Buscar attendee existente por email Y documento (persona exacta)
         const existingAttendee = await this.attendeeRepository.findOne({
-          where: [
-            { email: attendeeDto.email },
-            { documentNumber: attendeeDto.documentNumber },
-          ],
+          where: {
+            email: attendeeDto.email,
+            documentNumber: attendeeDto.documentNumber,
+          },
         });
 
         let attendeeId: number;

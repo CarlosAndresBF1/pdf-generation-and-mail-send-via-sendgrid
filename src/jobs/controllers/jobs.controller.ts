@@ -5,6 +5,7 @@ import {
   Param,
   ParseIntPipe,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,9 +16,11 @@ import {
 } from '@nestjs/swagger';
 import { JobsService } from '../services/jobs.service';
 import { JobSchedulerService } from '../services/job-scheduler.service';
+import { BulkUploadJobsService } from '../services/bulk-upload-jobs.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { BulkUploadJob } from '../entities/bulk-upload-job.entity';
 
-@ApiTags('Email Jobs')
+@ApiTags('Jobs')
 @Controller('jobs')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('jwt-auth')
@@ -25,6 +28,7 @@ export class JobsController {
   constructor(
     private readonly jobsService: JobsService,
     private readonly jobSchedulerService: JobSchedulerService,
+    private readonly bulkUploadJobsService: BulkUploadJobsService,
   ) {}
 
   @Get()
@@ -150,5 +154,61 @@ export class JobsController {
   })
   async forceProcessing() {
     return await this.jobSchedulerService.forceProcessJobs();
+  }
+
+  // Bulk Upload Jobs Endpoints
+
+  @Get('bulk-upload')
+  @ApiOperation({
+    summary: 'Get user bulk upload jobs',
+    description: 'Returns all bulk upload jobs for the authenticated user',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of bulk upload jobs retrieved successfully',
+    type: [BulkUploadJob],
+  })
+  async findUserBulkUploadJobs(@Request() req: any): Promise<BulkUploadJob[]> {
+    return this.bulkUploadJobsService.findByUser(Number(req.user.id));
+  }
+
+  @Get('bulk-upload/completed')
+  @ApiOperation({
+    summary: 'Get completed bulk upload jobs',
+    description: 'Returns all completed or failed bulk upload jobs',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of completed bulk upload jobs retrieved successfully',
+    type: [BulkUploadJob],
+  })
+  async findCompletedBulkUploadJobs(): Promise<BulkUploadJob[]> {
+    return this.bulkUploadJobsService.findCompleted();
+  }
+
+  @Get('bulk-upload/:id')
+  @ApiOperation({
+    summary: 'Get bulk upload job by ID',
+    description: 'Returns details of a specific bulk upload job',
+  })
+  @ApiParam({
+    name: 'id',
+    type: 'number',
+    description: 'Bulk upload job ID',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk upload job retrieved successfully',
+    type: BulkUploadJob,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Bulk upload job not found',
+  })
+  async findOneBulkUploadJob(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<BulkUploadJob> {
+    return this.bulkUploadJobsService.findOne(id);
   }
 }
