@@ -21,7 +21,7 @@ export class CreateCertificateDto {
 
   @ApiProperty({
     description: 'Certificate name',
-    example: 'Certificado de Participación Summit 2025',
+    example: 'Certificado de Participación VI Summit LATAM 18/09/2025',
     maxLength: 255,
   })
   @IsString()
@@ -31,7 +31,7 @@ export class CreateCertificateDto {
 
   @ApiProperty({
     description: 'Event name',
-    example: 'Summit Creadores del Cambio 2025',
+    example: 'VI Summit LATAM 2025',
     maxLength: 255,
   })
   @IsString()
@@ -42,7 +42,7 @@ export class CreateCertificateDto {
   @ApiProperty({
     description: 'Base design image URL in S3',
     example:
-      'https://cdn.creadoresdelcambionestle.com/designs/summit-2025-bg.jpg',
+      'https://cdn.creadoresdelcambionestle.com/certificates/design_images/design_cfb1e937.jpg',
     maxLength: 500,
   })
   @IsUrl()
@@ -52,7 +52,7 @@ export class CreateCertificateDto {
 
   @ApiProperty({
     description: 'PDF template reference',
-    example: 'summit-2025-template',
+    example: 'summit-2025-template-17',
     maxLength: 255,
   })
   @IsString()
@@ -62,7 +62,7 @@ export class CreateCertificateDto {
 
   @ApiProperty({
     description: 'SendGrid template ID for email',
-    example: 'd-abc123def456ghi789',
+    example: 'd-6297a8496d6744dbac334effa077a2ae',
     maxLength: 100,
   })
   @IsString()
@@ -72,35 +72,13 @@ export class CreateCertificateDto {
 
   @ApiProperty({
     description: 'Event link for email',
-    example: 'https://summit.creadoresdelcambio.com',
+    example: 'https://6summit2025.com/',
     maxLength: 500,
   })
   @IsUrl()
   @IsNotEmpty()
   @MaxLength(500)
   eventLink: string;
-
-  @ApiProperty({
-    description: 'Custom sender email for certificate emails',
-    example: 'admin@summit2025.com',
-    maxLength: 255,
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(255)
-  senderEmail?: string;
-
-  @ApiProperty({
-    description: 'Email subject for certificate emails',
-    example: 'Tu certificado del Summit 2025',
-    maxLength: 255,
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(255)
-  emailSubject?: string;
 
   @ApiProperty({
     description: 'Sender from name for certificate emails',
@@ -112,6 +90,29 @@ export class CreateCertificateDto {
   @IsOptional()
   @MaxLength(255)
   senderFromName?: string;
+
+  @ApiProperty({
+    description: 'Custom sender email for certificate emails',
+    example: 'admin@6summit2025.com',
+    maxLength: 255,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  senderEmail?: string;
+
+  @ApiProperty({
+    description: 'Email subject for certificate emails',
+    example:
+      '📢Revive lo mejor del VI Summit LATAM. Disponible hasta el 19 de octubre',
+    maxLength: 255,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  emailSubject?: string;
 
   @ApiProperty({
     description: 'Whether the certificate is active',
