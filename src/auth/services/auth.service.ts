@@ -46,7 +46,7 @@ export class AuthService {
       email: user.email,
       userName: user.userName,
     };
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
     // Devuelve el token de acceso, refresh token y los datos del usuario

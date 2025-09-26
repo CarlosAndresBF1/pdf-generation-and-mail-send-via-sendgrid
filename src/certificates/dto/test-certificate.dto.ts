@@ -28,6 +28,14 @@ export class TestCertificateDto {
   fullName: string;
 
   @ApiProperty({
+    description: 'Tipo de documento del asistente',
+    example: 'CC',
+  })
+  @IsString({ message: 'El tipo de documento debe ser un texto' })
+  @IsNotEmpty({ message: 'El tipo de documento es requerido' })
+  documentType: string;
+
+  @ApiProperty({
     description: 'Número de documento del asistente',
     example: '12345678',
   })

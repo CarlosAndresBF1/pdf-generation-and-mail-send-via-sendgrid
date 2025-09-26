@@ -16,6 +16,7 @@ interface SendGridError {
 export interface EmailData {
   to: string;
   templateId: string;
+  subject?: string;
   dynamicTemplateData: Record<string, any>;
   attachments?: Array<{
     content: string; // base64 encoded
@@ -47,9 +48,26 @@ export class EmailService {
     );
   }
 
+  private getFromObject(
+    customEmail?: string,
+    customName?: string,
+  ): string | { email: string; name: string } {
+    const email = this.getFromEmail(customEmail);
+
+    if (customName) {
+      return {
+        email,
+        name: customName,
+      };
+    }
+
+    return email;
+  }
+
   async sendEmail(
     emailData: EmailData,
     customFromEmail?: string,
+    customFromName?: string,
   ): Promise<void> {
     if (!this.sgMail) {
       throw new EmailException('SendGrid not initialized properly');
@@ -57,15 +75,27 @@ export class EmailService {
 
     const msg = {
       to: emailData.to,
-      from: this.getFromEmail(customFromEmail),
+      from: this.getFromObject(customFromEmail, customFromName),
       templateId: emailData.templateId,
+      subject: emailData.subject,
       dynamicTemplateData: emailData.dynamicTemplateData,
       attachments: emailData.attachments,
     };
 
+    // Log para debugging
+    console.log('SendGrid message payload:', {
+      to: msg.to,
+      from: msg.from,
+      templateId: msg.templateId,
+      subject: msg.subject,
+      dynamicTemplateData: msg.dynamicTemplateData,
+      attachmentsCount: msg.attachments?.length || 0,
+    });
+
     try {
       await this.sgMail.send(msg);
     } catch (error) {
+      console.error('SendGrid error details:', error);
       throw new EmailException(
         'Error enviando el email',
         error as SendGridError,
@@ -84,10 +114,13 @@ export class EmailService {
     pdfBuffer: Buffer,
     pdfFilename: string,
     customFromEmail?: string,
+    customSubject?: string,
+    customFromName?: string,
   ): Promise<void> {
     const emailData: EmailData = {
       to: recipientEmail,
       templateId,
+      subject: customSubject,
       dynamicTemplateData: {
         recipient_name: recipientName,
         certificate_name: certificateName,
@@ -105,6 +138,6 @@ export class EmailService {
       ],
     };
 
-    await this.sendEmail(emailData, customFromEmail);
+    await this.sendEmail(emailData, customFromEmail, customFromName);
   }
 }

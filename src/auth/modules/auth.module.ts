@@ -15,7 +15,7 @@ import { UsersModule } from '../../users/modules/users.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '30d' },
+        signOptions: { expiresIn: configService.get<string>('JWT_EXPIRES_IN') },
       }),
     }),
     UsersModule, // Importar el módulo de usuarios

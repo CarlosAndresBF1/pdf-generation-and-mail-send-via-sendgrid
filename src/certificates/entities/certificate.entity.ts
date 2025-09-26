@@ -27,6 +27,9 @@ export class Certificate {
   @Column({ name: 'pdf_template', length: 255 })
   pdfTemplate: string;
 
+  @Column({ name: 'sender_from_name', length: 255, nullable: true })
+  senderFromName: string;
+
   @Column({ name: 'sendgrid_template_id', length: 100 })
   sendgridTemplateId: string;
 
@@ -35,6 +38,15 @@ export class Certificate {
 
   @Column({ name: 'sender_email', length: 255, nullable: true })
   senderEmail: string;
+
+  @Column({
+    name: 'email_subject',
+    length: 255,
+    nullable: true,
+    charset: 'utf8mb4',
+    collation: 'utf8mb4_unicode_ci',
+  })
+  emailSubject: string;
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;

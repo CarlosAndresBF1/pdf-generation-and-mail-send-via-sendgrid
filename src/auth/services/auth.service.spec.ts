@@ -140,16 +140,13 @@ describe('AuthService', () => {
         user: user,
       });
       expect(mockJwtService.sign).toHaveBeenCalledTimes(2);
-      expect(mockJwtService.sign).toHaveBeenCalledWith(
-        {
-          id: user.id,
-          name: user.name,
-          lastName: user.lastName,
-          email: user.email,
-          userName: user.userName,
-        },
-        { expiresIn: '15m' },
-      );
+      expect(mockJwtService.sign).toHaveBeenCalledWith({
+        id: user.id,
+        name: user.name,
+        lastName: user.lastName,
+        email: user.email,
+        userName: user.userName,
+      });
       expect(mockJwtService.sign).toHaveBeenCalledWith(
         {
           id: user.id,

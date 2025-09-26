@@ -82,7 +82,7 @@ export class CertificatesService {
   async generateAndSendTestCertificate(
     testCertificateDto: TestCertificateDto,
   ): Promise<TestCertificateResponseDto> {
-    const { certificateId, fullName, documentNumber, email } =
+    const { certificateId, fullName, documentType, documentNumber, email } =
       testCertificateDto;
 
     // Verificar que existe la configuración del certificado
@@ -95,13 +95,15 @@ export class CertificatesService {
       eventName: certificate.eventName,
       baseDesignUrl: certificate.baseDesignUrl,
       country: 'Test',
-      documentType: 'Test',
+      documentType,
       documentNumber,
     };
 
     // Generar PDF usando el servicio de PDF generator directamente
-    const pdfBuffer =
-      await this.pdfGeneratorService.generateCertificatePdf(certificateData);
+    const pdfBuffer = await this.pdfGeneratorService.generateCertificatePdf(
+      certificateData,
+      certificate.pdfTemplate,
+    );
 
     // Generar nombre del archivo PDF
     const pdfFilename = `${certificate.client}_${fullName.replace(/\s+/g, '_')}_certificate.pdf`;
@@ -113,11 +115,13 @@ export class CertificatesService {
       certificate.name,
       certificate.eventName,
       certificate.eventLink,
-      '#', // Download link placeholder para certificado de prueba
+      '#',
       certificate.sendgridTemplateId,
       pdfBuffer,
       pdfFilename,
-      certificate.senderEmail, // Usar el email del certificado configurado en SendGrid
+      certificate.senderEmail,
+      certificate.emailSubject,
+      certificate.senderFromName,
     );
 
     return {

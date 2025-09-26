@@ -74,9 +74,12 @@ describe('CertificatesService', () => {
       name: 'Test Certificate',
       eventName: 'Test Event',
       baseDesignUrl: 'https://example.com/design.jpg',
+      pdfTemplate: 'summit-2025-template-17',
+      senderFromName: 'Test Team',
       sendgridTemplateId: 'template-123',
       eventLink: 'https://example.com/event',
       senderEmail: 'admin@testclient.com',
+      emailSubject: '📧 Test Certificate Subject',
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -85,6 +88,7 @@ describe('CertificatesService', () => {
     const testCertificateDto: TestCertificateDto = {
       certificateId: 1,
       fullName: 'Juan Carlos Pérez',
+      documentType: 'CC',
       documentNumber: '12345678',
       email: 'juan@example.com',
     };
@@ -107,15 +111,18 @@ describe('CertificatesService', () => {
 
       expect(
         mockPdfGeneratorService.generateCertificatePdf,
-      ).toHaveBeenCalledWith({
-        fullName: 'Juan Carlos Pérez',
-        certificateName: 'Test Certificate',
-        eventName: 'Test Event',
-        baseDesignUrl: 'https://example.com/design.jpg',
-        country: 'Test',
-        documentType: 'Test',
-        documentNumber: '12345678',
-      });
+      ).toHaveBeenCalledWith(
+        {
+          fullName: 'Juan Carlos Pérez',
+          certificateName: 'Test Certificate',
+          eventName: 'Test Event',
+          baseDesignUrl: 'https://example.com/design.jpg',
+          country: 'Test',
+          documentType: 'CC',
+          documentNumber: '12345678',
+        },
+        'summit-2025-template-17',
+      );
 
       expect(mockEmailService.sendCertificateEmail).toHaveBeenCalledWith(
         'juan@example.com',
@@ -128,6 +135,8 @@ describe('CertificatesService', () => {
         Buffer.from('mock-pdf'),
         'TestClient_Juan_Carlos_Pérez_certificate.pdf',
         'admin@testclient.com',
+        '📧 Test Certificate Subject',
+        'Test Team',
       );
 
       expect(result).toEqual({

@@ -11,24 +11,23 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            height: 100vh;
+            height: auto;
             font-family: 'Roboto', sans-serif;
             position: relative;
+            overflow: hidden;
         }
 
         .background-container {
-            position: absolute;
-            top: 0;
-            left: 0;
+            position: relative;
             width: 100%;
-            height: 100%;
+            height: auto;
             z-index: 1;
         }
 
         .background-image {
+            display: block;
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            height: auto;
         }
 
         .content-overlay {
@@ -40,35 +39,54 @@
             z-index: 2;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
             text-align: center;
+            background: transparent;
+        }
+
+        .name-section {
+            position: absolute;
+            top: 28%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+        }
+
+        .footer-section {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
         }
 
         .participant-name {
             font-family: 'Roboto', sans-serif;
             font-weight: bold;
             color: #145DB9;
-            font-size: 48px;
+            font-size: 68px;
             margin: 0;
             text-transform: capitalize;
-            margin-top: -50px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            margin-bottom: 7px;
         }
 
-        .event-info {
+        .participant-document {
             font-family: 'Roboto', sans-serif;
-            font-size: 20px;
-            color: #333;
-            margin-top: 20px;
-            font-weight: 400;
+            font-weight: bold;
+            color: #145DB9;
+            font-size: 35px;
+            margin: 0;
+            text-transform: capitalize;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
 
         .certificate-date {
             font-family: 'Roboto', sans-serif;
             font-size: 16px;
-            color: #666;
-            margin-top: 30px;
+            color: #000;
+            margin-bottom: 40px;
             font-weight: 400;
         }
     </style>
@@ -79,9 +97,13 @@
     </div>
     
     <div class="content-overlay">
-        <h1 class="participant-name">{{PARTICIPANT_NAME}}</h1>
-        <div class="event-info">{{EVENT_NAME}}</div>
-        <div class="certificate-date">{{CERTIFICATE_DATE}}</div>
+        <div class="name-section">
+            <h1 class="participant-name">{{PARTICIPANT_NAME}}</h1>
+            <h1 class="participant-document">{{documentType}} {{documentNumber}}</h1>
+        </div>
+        <div class="footer-section">
+            <div class="certificate-date">{{CERTIFICATE_NAME}} - generado el {{CERTIFICATE_DATE}}</div>
+        </div>
     </div>
 </body>
 </html>

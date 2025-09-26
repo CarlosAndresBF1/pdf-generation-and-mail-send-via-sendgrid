@@ -28,7 +28,7 @@ export class PdfGeneratorService {
   ): Promise<Buffer> {
     const templatePath = path.join(this.templatesPath, `${templateName}.html`);
 
-    // Read template file
+    // Read template file fresh every time (no caching)
     let htmlContent: string;
     try {
       htmlContent = await fs.readFile(templatePath, 'utf-8');
@@ -53,9 +53,23 @@ export class PdfGeneratorService {
       const page = await browser.newPage();
       await page.setContent(processedHtml, { waitUntil: 'networkidle0' });
 
+      // Get the dimensions of the image to set PDF size accordingly
+      const imageDimensions = await page.evaluate(() => {
+        const img = document.querySelector(
+          '.background-image',
+        ) as HTMLImageElement;
+        if (img) {
+          return {
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+          };
+        }
+        return { width: 1200, height: 800 }; // fallback dimensions
+      });
+
       const pdfBuffer = await page.pdf({
-        format: 'A4',
-        landscape: true,
+        width: `${imageDimensions.width}px`,
+        height: `${imageDimensions.height}px`,
         printBackground: true,
         margin: {
           top: '0mm',
@@ -72,14 +86,30 @@ export class PdfGeneratorService {
   }
 
   private replacePlaceholders(html: string, data: CertificateData): string {
-    return html
-      .replace(/\{\{fullName\}\}/g, data.fullName || '')
-      .replace(/\{\{certificateName\}\}/g, data.certificateName || '')
-      .replace(/\{\{eventName\}\}/g, data.eventName || '')
-      .replace(/\{\{baseDesignUrl\}\}/g, data.baseDesignUrl || '')
-      .replace(/\{\{country\}\}/g, data.country || '')
-      .replace(/\{\{documentType\}\}/g, data.documentType || '')
-      .replace(/\{\{documentNumber\}\}/g, data.documentNumber || '');
+    // Generate current date for certificate
+    const currentDate = new Date().toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    return (
+      html
+        // Template variables (summit-2025-template-17.html format)
+        .replace(/\{\{PARTICIPANT_NAME\}\}/g, data.fullName || '')
+        .replace(/\{\{CERTIFICATE_DATE\}\}/g, currentDate)
+        .replace(/\{\{CERTIFICATE_NAME\}\}/g, data.certificateName || '')
+        .replace(/\{\{BACKGROUND_IMAGE\}\}/g, data.baseDesignUrl || '')
+        .replace(/\{\{EVENT_NAME\}\}/g, data.eventName || '')
+        // Legacy variables (for backward compatibility)
+        .replace(/\{\{fullName\}\}/g, data.fullName || '')
+        .replace(/\{\{certificateName\}\}/g, data.certificateName || '')
+        .replace(/\{\{eventName\}\}/g, data.eventName || '')
+        .replace(/\{\{baseDesignUrl\}\}/g, data.baseDesignUrl || '')
+        .replace(/\{\{country\}\}/g, data.country || '')
+        .replace(/\{\{documentType\}\}/g, data.documentType || '')
+        .replace(/\{\{documentNumber\}\}/g, data.documentNumber || '')
+    );
   }
 
   private getDefaultTemplate(): string {

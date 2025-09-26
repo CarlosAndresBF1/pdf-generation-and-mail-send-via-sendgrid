@@ -85,6 +85,7 @@ All table and column names are in English with snake_case convention
    - `sendgrid_template_id` (varchar - SendGrid template ID)
    - `event_link` (varchar - event URL for emails)
    - `sender_email` (varchar(255) NULL - custom sender email for certificate emails)
+   - `email_subject` (varchar(255) UTF8MB4 NULL - custom email subject with emoji support)
    - `is_active` (boolean - active status)
    - `created_at`, `updated_at`
 
@@ -1566,18 +1567,31 @@ Custom exception class that converts SendGrid errors into structured HTTP 400 re
 
 ### Database Schema Updates
 
-#### certificates Table - sender_email Field
-- **Migration**: 1758842143000-AddSenderEmailToCertificates
-- **Field**: `sender_email` varchar(255) NULL
-- **Purpose**: Store custom sender email addresses per certificate
-- **SendGrid Requirements**: Email must be verified in SendGrid dashboard or domain must be authenticated
+#### certificates Table - Custom Email Fields
+- **Migration 1**: 1758842143000-AddSenderEmailToCertificates
+  - **Field**: `sender_email` varchar(255) NULL
+  - **Purpose**: Store custom sender email addresses per certificate
+  - **SendGrid Requirements**: Email must be verified in SendGrid dashboard or domain must be authenticated
+
+- **Migration 2**: 1758845000000-AddEmailSubjectToCertificates
+  - **Field**: `email_subject` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL
+  - **Purpose**: Store custom email subjects with emoji support
+  - **Charset**: UTF8MB4 for full Unicode support including emojis
+  - **Example**: "📢 Revive lo mejor del VI Summit LATAM. Disponible hasta el 19 de octubre"
 
 ### Technical Implementation
 
 #### Core Services
-- **CertificatesService.generateAndSendTestCertificate**: Main test certificate workflow
-- **EmailService**: Enhanced with custom sender email support and error handling
+- **CertificatesService.generateAndSendTestCertificate**: Main test certificate workflow with custom sender and subject
+- **EmailService**: Enhanced with custom sender email and subject support plus error handling
 - **EmailException**: Structured error responses for SendGrid failures
+
+#### Email Service Features
+- **Custom Sender Email**: Uses certificate.senderEmail field for personalized from addresses
+- **Custom Subject**: Uses certificate.emailSubject field with full emoji support
+- **PDF Attachments**: Generates and attaches certificate PDFs to emails
+- **Template Integration**: Works with SendGrid templates while supporting custom subjects
+- **Error Handling**: Provides detailed SendGrid error information
 
 #### Configuration Updates
 - **JWT Token Duration**: Extended to 3 days (JWT_EXPIRES_IN=3d)
@@ -1596,6 +1610,7 @@ Custom exception class that converts SendGrid errors into structured HTTP 400 re
 - **📊 Data Import**: Bulk upload system with validation and error reporting
 - **📧 Test Certificates**: Complete test certificate system with custom sender emails
 - **🚨 Error Handling**: Structured SendGrid error responses with detailed information
+- **📧 Custom Email Features**: Custom sender emails and subjects with emoji support
 - **External Integrations**: S3 storage and SendGrid email working with custom sender support
 - **Monitoring**: Complete job tracking and error reporting
 - **Documentation**: Comprehensive API docs and system architecture
@@ -1636,5 +1651,5 @@ npm run test:watch
 - ✅ Test Certificates: Complete test certificate system with custom sender emails
 - ✅ Email Integration: SendGrid with custom sender support and detailed error handling
 
-Last Updated: September 25, 2025 - **ENHANCED WITH TEST CERTIFICATE SYSTEM AND EMAIL ERROR HANDLING**  
-Claude Context: Complete certificate management system with test functionality, custom sender emails, and structured error handling. Ready for production deployment with comprehensive monitoring and validation capabilities.
+Last Updated: September 25, 2025 - **ENHANCED WITH CUSTOM EMAIL SUBJECTS AND EMOJI SUPPORT**  
+Claude Context: Complete certificate management system with test functionality, custom sender emails, custom subjects with emoji support, and structured error handling. Features UTF8MB4 database charset for full Unicode compatibility. Ready for production deployment with comprehensive email customization capabilities.
