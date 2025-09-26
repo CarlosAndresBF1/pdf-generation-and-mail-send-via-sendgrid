@@ -36,10 +36,7 @@ export class FileProcessingService {
   /**
    * Procesa un archivo CSV o Excel y retorna los attendees procesados
    */
-  async processFile(
-    file: Express.Multer.File,
-    updateExisting = false,
-  ): Promise<BulkUploadResponseDto> {
+  async processFile(file: Express.Multer.File): Promise<BulkUploadResponseDto> {
     if (!file) {
       throw new BadRequestException('No se proporcionó ningún archivo');
     }
@@ -67,7 +64,7 @@ export class FileProcessingService {
     }
 
     // Procesar los datos
-    return await this.processAttendeeData(parsedData, updateExisting);
+    return await this.processAttendeeData(parsedData);
   }
 
   /**
@@ -200,7 +197,6 @@ export class FileProcessingService {
    */
   private async processAttendeeData(
     parsedData: ParsedFileData,
-    updateExisting: boolean,
   ): Promise<BulkUploadResponseDto> {
     const response: BulkUploadResponseDto = {
       totalRecords: parsedData.data.length,
@@ -253,6 +249,38 @@ export class FileProcessingService {
           continue;
         }
 
+        // Si hay certificateId, verificar primero si ya existe la asociación
+        if (attendeeDto.certificateId) {
+          // Buscar si ya existe un certificado generado para este email/documento y certificado
+          const existingCertificate = await this.generatedCertificateRepository
+            .createQueryBuilder('gc')
+            .innerJoin('gc.attendee', 'a')
+            .where('gc.certificate_id = :certificateId', {
+              certificateId: attendeeDto.certificateId,
+            })
+            .andWhere(
+              '(a.email = :email OR a.document_number = :documentNumber)',
+              {
+                email: attendeeDto.email,
+                documentNumber: attendeeDto.documentNumber,
+              },
+            )
+            .getOne();
+
+          if (existingCertificate) {
+            // Ya existe un certificado para esta persona y este certificado específico
+            response.errorDetails.push({
+              row: rowNumber,
+              data: rowData,
+              errors: [
+                `Ya existe un certificado generado para este email/documento en el certificado ${attendeeDto.certificateId}`,
+              ],
+            });
+            response.errors++;
+            continue;
+          }
+        }
+
         // Buscar attendee existente por email o documento
         const existingAttendee = await this.attendeeRepository.findOne({
           where: [
@@ -264,30 +292,8 @@ export class FileProcessingService {
         let attendeeId: number;
 
         if (existingAttendee) {
-          if (updateExisting) {
-            // Actualizar attendee existente
-            await this.attendeeRepository.update(existingAttendee.id, {
-              fullName: attendeeDto.fullName,
-              firstName: attendeeDto.firstName,
-              lastName: attendeeDto.lastName,
-              country: attendeeDto.country,
-              documentType: attendeeDto.documentType,
-              documentNumber: attendeeDto.documentNumber,
-              gender: attendeeDto.gender,
-              email: attendeeDto.email,
-            });
-            attendeeId = existingAttendee.id;
-            response.updated++;
-          } else {
-            // Marcar como duplicado
-            response.errorDetails.push({
-              row: rowNumber,
-              data: rowData,
-              errors: ['Attendee ya existe (email o documento duplicado)'],
-            });
-            response.errors++;
-            continue;
-          }
+          // Usar el attendee existente sin actualizar
+          attendeeId = existingAttendee.id;
         } else {
           // Crear nuevo attendee
           const newAttendee = this.attendeeRepository.create({

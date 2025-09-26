@@ -1,32 +1,32 @@
 # Certificate Generation System - Complete Project Context
 
-## 📋 Project Overview
+## Project Overview
 
 **Project Name**: Certification Mails API  
-**Version**: 1.0.0  
+**Version**: 1.1.1  
 **Framework**: NestJS 11.0.1 + TypeScript  
 **Database**: MySQL (AWS RDS)  
 **Node Version**: 22-alpine  
-**Port**: 3969 (external) → 3000 (internal)  
+**Port**: 3969 (external) to 3000 (internal)  
 **API Prefix**: /api/v1  
 **Documentation**: Available at /api/docs (Swagger)  
-**Test Coverage**: 51/51 tests passing ✅ (Including test certificate endpoint and email error handling)
+**Test Coverage**: 51/51 tests passing (Including test certificate endpoint and email error handling)
 
 ### Business Purpose
-Sistema de generación y envío automatizado de certificados en PDF para eventos corporativos con sistema robusto de cola de trabajos. Características principales:
+Sistema de generacion y envio automatizado de certificados en PDF para eventos corporativos con sistema robusto de cola de trabajos. Caracteristicas principales:
 
-- **Autenticación JWT** con refresh tokens para usuarios administrativos
-- **Configuración flexible** de plantillas de certificados personalizables  
-- **Carga masiva** de asistentes a eventos con validación
-- **Generación automática** de certificados PDF usando HTML templates
-- **Almacenamiento S3** con estructura organizada por cliente/año
-- **Sistema de cola de trabajos** con procesamiento automático cada 5 minutos 
-- **Cron jobs inteligentes** con prevención de concurrencia y monitoreo
-- **Integración SendGrid** con templates personalizados por certificado
-- **Descarga pública** de certificados sin autenticación
-- **Monitoreo completo** de jobs con trazabilidad de errores
+- Autenticacion JWT con refresh tokens para usuarios administrativos
+- Configuracion flexible de plantillas de certificados personalizables  
+- Carga masiva de asistentes a eventos con validacion
+- Generacion automatica de certificados PDF usando HTML templates
+- Almacenamiento S3 con estructura organizada por cliente/anio
+- Sistema de cola de trabajos con procesamiento automatico cada 5 minutos 
+- Cron jobs inteligentes con prevencion de concurrencia y monitoreo
+- Integracion SendGrid con templates personalizados por certificado
+- Descarga publica de certificados sin autenticacion
+- Monitoreo completo de jobs con trazabilidad de errores
 
-## 🏗️ Technical Architecture
+## Technical Architecture
 
 ### Core Technologies Stack
 ```json
@@ -37,7 +37,7 @@ Sistema de generación y envío automatizado de certificados en PDF para eventos
   "orm": "TypeORM 0.3.27",
   "authentication": "JWT + Refresh Token (@nestjs/jwt 11.0.0)",
   "password_hashing": "bcryptjs 3.0.2",
-  "pdf_generation": "HTML to PDF conversion",
+  "pdf_generation": "HTML to PDF conversion using Puppeteer",
   "file_storage": "AWS S3 (@aws-sdk/client-s3 3.896.0)",
   "file_upload": "Multer (@nestjs/platform-express) + UUID v4.3.1",
   "file_processing": "CSV (papaparse 5.5.0) + Excel (xlsx 0.18.5)",
@@ -46,7 +46,7 @@ Sistema de generación y envío automatizado de certificados en PDF para eventos
   "cron_scheduler": "@nestjs/schedule - Automatic job processing every 5 minutes",
   "api_documentation": "Swagger (@nestjs/swagger 11.2.0)",
   "validation": "class-validator 0.14.2 + class-transformer 0.5.1",
-  "testing": "Jest (56/56 unit + integration tests) ✅",
+  "testing": "Jest (51/51 unit + integration tests)",
   "containerization": "Docker + Docker Compose"
 }
 ```
@@ -284,14 +284,13 @@ Sistema robusto de carga masiva de asistentes que permite procesar archivos CSV/
 ### 🔗 API Endpoint
 
 **POST** `/api/v1/attendees/bulk-upload`
-- **Autenticación**: JWT requerido
+- **Autenticacion**: JWT requerido
 - **Content-Type**: `multipart/form-data`
 
 #### Request Parameters
 ```typescript
 {
   file: Express.Multer.File;        // CSV/Excel (requerido)
-  updateExisting?: boolean;         // Actualizar duplicados (opcional)
 }
 ```
 
@@ -1651,5 +1650,34 @@ npm run test:watch
 - ✅ Test Certificates: Complete test certificate system with custom sender emails
 - ✅ Email Integration: SendGrid with custom sender support and detailed error handling
 
-Last Updated: September 25, 2025 - **ENHANCED WITH CUSTOM EMAIL SUBJECTS AND EMOJI SUPPORT**  
-Claude Context: Complete certificate management system with test functionality, custom sender emails, custom subjects with emoji support, and structured error handling. Features UTF8MB4 database charset for full Unicode compatibility. Ready for production deployment with comprehensive email customization capabilities.
+## Recent Updates
+
+### Version 1.1.1 Changes
+1. **PDF Template Improvements**: Fixed image overflow issues with responsive sizing based on background image dimensions
+2. **Test Certificate Enhancement**: Added documentType field to test certificate generation
+3. **Email Customization**: Added sender_from_name field to certificates table for personalized email sender
+4. **SendGrid Integration Fix**: Resolved initialization issues with dynamic require() pattern
+5. **Duplicate Logic Improvement**: Modified bulk upload to allow attendees across different certificates while preventing certificate duplicates per event
+6. **Code Quality**: Fixed all ESLint errors and maintained 51/51 test coverage
+7. **Bulk Upload Simplification**: Removed updateExisting parameter from bulk upload, system now always uses existing attendees without updating them
+
+### Business Rule Changes
+- **Attendee Reuse**: Same person can participate in multiple events (different certificates) without restrictions
+- **Certificate Uniqueness**: System prevents duplicate certificates for same attendee within same certificate/event
+- **No Updates**: Bulk upload no longer updates existing attendee information, always uses existing records
+- **Validation Focus**: Emphasis on certificate-level duplicate prevention rather than attendee-level restrictions
+
+### Template System
+- **Location**: src/certificates/templates/
+- **Current Template**: summit-2025-template-17.html with responsive PDF sizing
+- **Features**: Dynamic positioning, background image sizing, variable substitution
+- **CSS**: Embedded styles with absolute positioning for precise layout control
+
+### Job Processing
+- **Frequency**: Every 5 minutes via cron job
+- **Concurrency**: Single processor with lock mechanism
+- **Error Tracking**: Comprehensive logging of failures and retry logic
+- **Status Management**: Real-time job status updates with detailed error messages
+
+Last Updated: September 25, 2025 - **BULK UPLOAD SIMPLIFIED AND DUPLICATE LOGIC IMPROVED**  
+Claude Context: Complete certificate management system with simplified bulk upload logic, improved duplicate validation, responsive PDF templates, and comprehensive email customization. System allows attendee reuse across events while preventing certificate duplicates. Ready for production deployment with enterprise-grade reliability.

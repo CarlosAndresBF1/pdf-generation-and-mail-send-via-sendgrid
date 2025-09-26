@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { BadRequestException } from '@nestjs/common';
 
 import { FileProcessingService } from './file-processing.service';
@@ -10,9 +9,6 @@ import { GeneratedCertificate } from '../../generated-certificates/entities/gene
 
 describe('FileProcessingService', () => {
   let service: FileProcessingService;
-  let attendeeRepository: Repository<Attendee>;
-  let certificateRepository: Repository<Certificate>;
-  let generatedCertificateRepository: Repository<GeneratedCertificate>;
 
   const mockAttendeeRepository = {
     findOne: jest.fn(),
@@ -29,6 +25,12 @@ describe('FileProcessingService', () => {
     findOne: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue({
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getOne: jest.fn(),
+    }),
   };
 
   beforeEach(async () => {
@@ -51,15 +53,6 @@ describe('FileProcessingService', () => {
     }).compile();
 
     service = module.get<FileProcessingService>(FileProcessingService);
-    attendeeRepository = module.get<Repository<Attendee>>(
-      getRepositoryToken(Attendee),
-    );
-    certificateRepository = module.get<Repository<Certificate>>(
-      getRepositoryToken(Certificate),
-    );
-    generatedCertificateRepository = module.get<
-      Repository<GeneratedCertificate>
-    >(getRepositoryToken(GeneratedCertificate));
   });
 
   afterEach(() => {
@@ -116,66 +109,61 @@ Juan Pérez,juan@example.com,Colombia,CC,12345678,M`;
       expect(mockAttendeeRepository.save).toHaveBeenCalled();
     });
 
-    it('should handle duplicate attendees correctly when updateExisting is false', async () => {
+    it('should use existing attendee without updating', async () => {
       const csvContent = `fullName,email,country,documentType,documentNumber,gender
 Juan Pérez,juan@example.com,Colombia,CC,12345678,M`;
 
       const mockFile = {
-        originalname: 'test.csv',
         buffer: Buffer.from(csvContent),
+        originalname: 'test.csv',
+        mimetype: 'text/csv',
       } as Express.Multer.File;
 
       // Mock existing attendee
-      mockCertificateRepository.find.mockResolvedValue([]);
       mockAttendeeRepository.findOne.mockResolvedValue({
         id: 1,
         email: 'juan@example.com',
       });
 
-      const result = await service.processFile(mockFile, false);
+      const result = await service.processFile(mockFile);
 
       expect(result.totalRecords).toBe(1);
       expect(result.created).toBe(0);
       expect(result.updated).toBe(0);
-      expect(result.errors).toBe(1);
-      expect(result.errorDetails[0].errors).toContain(
-        'Attendee ya existe (email o documento duplicado)',
-      );
+      expect(result.errors).toBe(0);
+      expect(mockAttendeeRepository.save).not.toHaveBeenCalled();
+      expect(mockAttendeeRepository.update).not.toHaveBeenCalled();
     });
 
-    it('should update existing attendee when updateExisting is true', async () => {
+    it('should create new attendee when not exists', async () => {
       const csvContent = `fullName,email,country,documentType,documentNumber,gender
-Juan Pérez Actualizado,juan@example.com,Colombia,CC,12345678,M`;
+Juan Pérez Nuevo,juan.nuevo@example.com,Colombia,CC,87654321,M`;
 
       const mockFile = {
         originalname: 'test.csv',
         buffer: Buffer.from(csvContent),
       } as Express.Multer.File;
 
-      // Mock existing attendee
+      // Mock no existing attendee
       mockCertificateRepository.find.mockResolvedValue([]);
-      mockAttendeeRepository.findOne.mockResolvedValue({
-        id: 1,
-        email: 'juan@example.com',
+      mockAttendeeRepository.findOne.mockResolvedValue(null);
+      mockAttendeeRepository.create.mockReturnValue({
+        id: 2,
+        email: 'juan.nuevo@example.com',
       });
-      mockAttendeeRepository.update.mockResolvedValue(undefined);
+      mockAttendeeRepository.save.mockResolvedValue({
+        id: 2,
+        email: 'juan.nuevo@example.com',
+      });
 
-      const result = await service.processFile(mockFile, true);
+      const result = await service.processFile(mockFile);
 
       expect(result.totalRecords).toBe(1);
-      expect(result.created).toBe(0);
-      expect(result.updated).toBe(1);
+      expect(result.created).toBe(1);
+      expect(result.updated).toBe(0);
       expect(result.errors).toBe(0);
-      expect(mockAttendeeRepository.update).toHaveBeenCalledWith(1, {
-        fullName: 'Juan Pérez Actualizado',
-        firstName: undefined,
-        lastName: undefined,
-        country: 'Colombia',
-        documentType: 'CC',
-        documentNumber: '12345678',
-        gender: 'M',
-        email: 'juan@example.com',
-      });
+      expect(mockAttendeeRepository.create).toHaveBeenCalled();
+      expect(mockAttendeeRepository.save).toHaveBeenCalled();
     });
 
     it('should create certificate association when certificate_id is provided', async () => {
@@ -273,7 +261,7 @@ Juan Pérez,juan@example.com,Colombia,CC,12345678,M,999`;
   describe('normalizeColumnName', () => {
     it('should normalize column names correctly', () => {
       // Access private method through service instance
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const normalizeColumnName = (service as any).normalizeColumnName as (
         column: string,
       ) => string;

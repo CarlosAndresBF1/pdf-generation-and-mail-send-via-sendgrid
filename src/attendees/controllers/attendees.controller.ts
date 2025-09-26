@@ -10,7 +10,6 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
-  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -21,7 +20,6 @@ import {
   ApiParam,
   ApiBody,
   ApiConsumes,
-  ApiQuery,
 } from '@nestjs/swagger';
 import { AttendeesService } from '../services/attendees.service';
 import { CreateAttendeeDto } from '../dto/create-attendee.dto';
@@ -166,20 +164,8 @@ export class AttendeesController {
           format: 'binary',
           description: 'CSV or Excel file with attendee data',
         },
-        updateExisting: {
-          type: 'boolean',
-          description:
-            'Whether to update existing attendees or skip duplicates',
-          default: false,
-        },
       },
     },
-  })
-  @ApiQuery({
-    name: 'updateExisting',
-    required: false,
-    type: Boolean,
-    description: 'Update existing attendees if found',
   })
   @ApiResponse({
     status: 201,
@@ -192,9 +178,8 @@ export class AttendeesController {
   })
   async bulkUpload(
     @UploadedFile() file: Express.Multer.File,
-    @Query('updateExisting') updateExisting = false,
   ): Promise<BulkUploadResponseDto> {
-    return this.fileProcessingService.processFile(file, updateExisting);
+    return this.fileProcessingService.processFile(file);
   }
 
   @Delete(':id')
