@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
 
 import { CertificatesService } from './certificates.service';
@@ -11,9 +10,6 @@ import { TestCertificateDto } from '../dto/test-certificate.dto';
 
 describe('CertificatesService', () => {
   let service: CertificatesService;
-  let certificateRepository: Repository<Certificate>;
-  let pdfGeneratorService: PdfGeneratorService;
-  let emailService: EmailService;
 
   const mockCertificateRepository = {
     create: jest.fn(),
@@ -52,11 +48,6 @@ describe('CertificatesService', () => {
     }).compile();
 
     service = module.get<CertificatesService>(CertificatesService);
-    certificateRepository = module.get<Repository<Certificate>>(
-      getRepositoryToken(Certificate),
-    );
-    pdfGeneratorService = module.get<PdfGeneratorService>(PdfGeneratorService);
-    emailService = module.get<EmailService>(EmailService);
   });
 
   afterEach(() => {

@@ -154,6 +154,7 @@ describe('CertificatesController - Upload Design Image', () => {
     const testCertificateDto = {
       certificateId: 1,
       fullName: 'Juan Carlos Pérez',
+      documentType: 'CC',
       documentNumber: '12345678',
       email: 'juan@example.com',
     };
