@@ -60,7 +60,7 @@ export class JobsService {
         'generatedCertificate.certificate',
         'generatedCertificate.attendee',
       ],
-      take: 10, // Process max 10 jobs at a time
+      take: 100,
     });
 
     let successful = 0;
