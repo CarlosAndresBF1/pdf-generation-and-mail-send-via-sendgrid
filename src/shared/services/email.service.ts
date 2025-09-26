@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as sgMail from '@sendgrid/mail';
 import { EmailException } from '../exceptions/email.exception';
 
 interface SendGridError {
@@ -29,12 +28,21 @@ export interface EmailData {
 
 @Injectable()
 export class EmailService {
+  private sgMail: any;
+
   constructor(private readonly configService: ConfigService) {
-    // Initialize SendGrid synchronously
-    // Use MAIL_API_KEY which contains the SendGrid API Key
-    const apiKey = this.configService.get<string>('MAIL_API_KEY');
-    if (apiKey) {
-      sgMail.setApiKey(apiKey);
+    // Initialize SendGrid dynamically
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      this.sgMail = require('@sendgrid/mail');
+      // Use MAIL_API_KEY which contains the SendGrid API Key
+      const apiKey = this.configService.get<string>('MAIL_API_KEY');
+      if (apiKey) {
+        this.sgMail.setApiKey(apiKey);
+      }
+    } catch (error) {
+      console.error('Error initializing SendGrid:', error);
+      throw new EmailException('Failed to initialize SendGrid service');
     }
   }
 
@@ -67,6 +75,10 @@ export class EmailService {
     customFromEmail?: string,
     customFromName?: string,
   ): Promise<void> {
+    if (!this.sgMail) {
+      throw new EmailException('SendGrid service not initialized properly');
+    }
+
     const msg = {
       to: emailData.to,
       from: this.getFromObject(customFromEmail, customFromName),
@@ -87,7 +99,7 @@ export class EmailService {
     });
 
     try {
-      await sgMail.send(msg);
+      await this.sgMail.send(msg);
     } catch (error) {
       console.error('SendGrid error details:', error);
       throw new EmailException(
