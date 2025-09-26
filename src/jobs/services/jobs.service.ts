@@ -60,7 +60,7 @@ export class JobsService {
         'generatedCertificate.certificate',
         'generatedCertificate.attendee',
       ],
-      take: 100,
+      take: 200,
     });
 
     let successful = 0;
