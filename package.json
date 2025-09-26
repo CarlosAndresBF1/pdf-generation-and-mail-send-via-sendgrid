@@ -22,10 +22,11 @@
     "typeorm": "typeorm-ts-node-commonjs -d src/config/database.config.ts",
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:run": "npm run typeorm -- migration:run",
-    "migration:revert": "npm run typeorm -- migration:revert"
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "clean:install": "rm -rf node_modules package-lock.json && npm cache clean --force && npm install --legacy-peer-deps"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.896.0",
+    "@aws-sdk/client-s3": "3.800.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -108,5 +109,8 @@
     "transformIgnorePatterns": [
       "node_modules/(?!(uuid)/)"
     ]
+  },
+  "overrides": {
+    "@aws-sdk/client-s3": "3.800.0"
   }
 }
