@@ -142,9 +142,9 @@ export class JobsService {
         this.jobRepository.save(job),
         this.generatedCertificateRepository.save(generatedCertificate),
       ]);
-      console.log(
+      /*console.log(
         `Email sent successfully for certificate ${generatedCertificate.id}`,
-      );
+      );*/
     } catch (error) {
       console.error(`Error processing job ${job.id}:`, error);
 

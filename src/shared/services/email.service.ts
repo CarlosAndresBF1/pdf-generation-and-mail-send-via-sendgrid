@@ -89,14 +89,14 @@ export class EmailService {
     };
 
     // Log para debugging
-    console.log('SendGrid message payload:', {
+    /*console.log('SendGrid message payload:', {
       to: msg.to,
       from: msg.from,
       templateId: msg.templateId,
       subject: msg.subject,
       dynamicTemplateData: msg.dynamicTemplateData,
       attachmentsCount: msg.attachments?.length || 0,
-    });
+    });*/
 
     try {
       await this.sgMail.send(msg);
