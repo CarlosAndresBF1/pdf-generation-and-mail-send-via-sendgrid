@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { GeneratedCertificatesService } from '../services/generated-certificates.service';
 import { GenerateCertificatesDto } from '../dto/generate-certificates.dto';
+import { SendEmailsDto } from '../dto/send-emails.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 @ApiTags('Generated Certificates')
@@ -33,9 +34,9 @@ export class GeneratedCertificatesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('jwt-auth')
   @ApiOperation({
-    summary: 'Generate certificates',
+    summary: 'Generate PDF certificates for attendees',
     description:
-      'Generates PDF certificates for specified attendees and optionally schedules email sending',
+      'Creates PDF certificates for the specified list of attendees using a certificate template. The system generates individual PDFs with personalized data, uploads them to S3 storage, and stores the certificate records in the database. Optionally creates email jobs for automatic delivery if sendEmails is true. Prevents duplicate certificate generation for the same attendee-certificate combination.',
   })
   @ApiResponse({
     status: 201,
@@ -55,8 +56,9 @@ export class GeneratedCertificatesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('jwt-auth')
   @ApiOperation({
-    summary: 'Schedule email sending',
-    description: 'Schedules email sending for specific generated certificates',
+    summary: 'Schedule email delivery for a single certificate',
+    description:
+      'Creates an email job for delivering a specific generated certificate to the attendee. The system adds the certificate to the email queue for asynchronous processing. Only creates a job if one does not already exist for this certificate to prevent duplicate email delivery. The email will include the PDF certificate as an attachment and use the custom sender configuration from the certificate template.',
   })
   @ApiParam({
     name: 'id',
@@ -72,12 +74,88 @@ export class GeneratedCertificatesController {
     return this.generatedCertificatesService.sendCertificateEmails([id]);
   }
 
+  @Post('send-emails')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('jwt-auth')
+  @ApiOperation({
+    summary: 'Schedule email delivery for multiple certificates',
+    description:
+      'Creates email jobs for multiple generated certificates in a single operation. The system validates each certificate ID, checks for existing jobs to prevent duplicates, and creates new jobs only for certificates that do not already have email jobs. Returns detailed statistics about how many jobs were created versus skipped. This is ideal for bulk email operations after generating multiple certificates.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email jobs scheduled successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            jobsCreated: { type: 'number', example: 5 },
+            jobsSkipped: { type: 'number', example: 2 },
+            totalRequested: { type: 'number', example: 7 },
+          },
+        },
+        message: {
+          type: 'string',
+          example: 'Email jobs scheduled successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  scheduleMultipleEmails(@Body() sendEmailsDto: SendEmailsDto) {
+    return this.generatedCertificatesService.sendCertificateEmails(
+      sendEmailsDto.certificateIds,
+    );
+  }
+
+  @Post('process-pending')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('jwt-auth')
+  @ApiOperation({
+    summary: 'Process all certificates without email jobs',
+    description:
+      'Automatically identifies all generated certificates in the system that do not have associated email jobs and creates jobs for them. This is a comprehensive cleanup operation that ensures no certificate is left without an email delivery job. Uses advanced database queries with LEFT JOIN to efficiently find certificates without jobs, includes race condition protection, and provides detailed reporting of processed certificates. Perfect for batch processing after bulk certificate generation or system maintenance.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending certificates processed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            totalCertificates: { type: 'number', example: 10 },
+            jobsCreated: { type: 'number', example: 8 },
+            alreadyProcessed: { type: 'number', example: 2 },
+          },
+        },
+        message: {
+          type: 'string',
+          example:
+            'Processed pending certificates: 8 jobs created, 2 already had jobs',
+        },
+      },
+    },
+  })
+  processPendingCertificates() {
+    return this.generatedCertificatesService.processPendingCertificates();
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('jwt-auth')
   @ApiOperation({
-    summary: 'Get all generated certificates',
-    description: 'Retrieves all generated certificates with their details',
+    summary: 'List all generated certificates in the system',
+    description:
+      'Retrieves a comprehensive list of all generated certificates with complete details including certificate configuration, attendee information, S3 URLs, generation timestamps, and email delivery status. Results are ordered by generation date (newest first) and include full relational data for certificates and attendees. Useful for administrative overview and system monitoring.',
   })
   @ApiResponse({
     status: 200,
@@ -91,8 +169,9 @@ export class GeneratedCertificatesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('jwt-auth')
   @ApiOperation({
-    summary: 'Get generated certificate by ID',
-    description: 'Retrieves a specific generated certificate with its details',
+    summary: 'Get detailed information for a specific certificate',
+    description:
+      'Retrieves complete details for a single generated certificate including all associated data such as attendee information, certificate template configuration, S3 storage URL, generation timestamp, and email delivery status. Returns 404 if the certificate does not exist. Includes full relational data for comprehensive certificate inspection.',
   })
   @ApiParam({
     name: 'id',
@@ -116,8 +195,9 @@ export class GeneratedCertificatesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('jwt-auth')
   @ApiOperation({
-    summary: 'Delete generated certificate',
-    description: 'Deletes a generated certificate and its PDF from S3',
+    summary: 'Delete a generated certificate permanently',
+    description:
+      'Permanently removes a generated certificate from the system including its database record and associated PDF file from S3 storage. This operation cannot be undone. The certificate will no longer be accessible for download and any associated email jobs may fail. Use with caution as this affects data integrity and user access to their certificates.',
   })
   @ApiParam({
     name: 'id',
@@ -148,9 +228,9 @@ export class PublicCertificateController {
 
   @Get(':id/download')
   @ApiOperation({
-    summary: 'Download certificate PDF',
+    summary: 'Download certificate PDF file (public access)',
     description:
-      'Downloads a certificate PDF. Regenerates the PDF in real-time. No authentication required.',
+      'Generates and downloads a certificate PDF file in real-time using the original certificate template and attendee data. This endpoint does not require authentication and is designed for public access via email links. The PDF is regenerated dynamically to ensure it always reflects the current template design. Returns the PDF as a downloadable attachment with appropriate headers for browser compatibility.',
   })
   @ApiParam({
     name: 'id',

@@ -46,11 +46,12 @@ export class EmailService {
   }
 
   private getFromEmail(customEmail?: string): string {
-    return (
-      customEmail ||
-      this.configService.get<string>('MAIL_FROM_ADDRESS') ||
-      'noreply@example.com'
-    );
+    if (!customEmail) {
+      throw new EmailException(
+        'Custom sender email is required. MAIL_FROM_ADDRESS fallback is not allowed.',
+      );
+    }
+    return customEmail;
   }
 
   private getFromObject(

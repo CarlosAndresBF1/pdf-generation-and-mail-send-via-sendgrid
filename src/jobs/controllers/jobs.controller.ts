@@ -33,8 +33,9 @@ export class JobsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Get all email jobs',
-    description: 'Retrieves all email jobs with their status',
+    summary: 'List all email delivery jobs in the system',
+    description:
+      'Retrieves a comprehensive list of all email delivery jobs including their current status (pending, sent, error), associated certificate information, attendee details, attempt timestamps, and error messages if any. Jobs are returned with full relational data for monitoring and debugging purposes. Essential for system administration and email delivery tracking.',
   })
   @ApiResponse({
     status: 200,
@@ -46,8 +47,9 @@ export class JobsController {
 
   @Get('pending')
   @ApiOperation({
-    summary: 'Get pending email jobs',
-    description: 'Retrieves all pending email jobs',
+    summary: 'Get all pending email jobs waiting for processing',
+    description:
+      'Retrieves all email jobs that are currently in pending status and waiting to be processed by the job scheduler. This endpoint is useful for monitoring the email queue size and identifying any backlogs in email delivery. Shows detailed information about each pending job including associated certificate and attendee data.',
   })
   @ApiResponse({
     status: 200,
@@ -59,8 +61,9 @@ export class JobsController {
 
   @Post('process-pending')
   @ApiOperation({
-    summary: 'Process pending email jobs',
-    description: 'Processes all pending email jobs in the queue',
+    summary: 'Manually trigger processing of pending email jobs',
+    description:
+      'Immediately processes up to 10 pending email jobs from the queue instead of waiting for the scheduled job processor. This endpoint manually triggers the same job processing logic that runs automatically every 5 minutes. Useful for testing, urgent deliveries, or reducing queue backlogs. Returns statistics about successful and failed processing attempts.',
   })
   @ApiResponse({
     status: 200,
@@ -72,8 +75,9 @@ export class JobsController {
 
   @Post(':id/retry')
   @ApiOperation({
-    summary: 'Retry failed email job',
-    description: 'Retries a specific failed email job',
+    summary: 'Retry a failed email delivery job',
+    description:
+      'Resets a failed email job back to pending status so it can be processed again by the job scheduler. This is useful when email delivery failed due to temporary issues like network problems or SendGrid service interruptions. The job will be picked up in the next processing cycle. Only works with jobs that have error status.',
   })
   @ApiParam({
     name: 'id',
@@ -95,8 +99,9 @@ export class JobsController {
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Get email job by ID',
-    description: 'Retrieves a specific email job with its details',
+    summary: 'Get detailed information for a specific email job',
+    description:
+      'Retrieves complete details for a specific email job including its current status, associated certificate information, attendee data, processing timestamps, error messages if failed, and delivery attempt history. Essential for debugging individual job issues and tracking email delivery status.',
   })
   @ApiParam({
     name: 'id',
@@ -118,9 +123,9 @@ export class JobsController {
 
   @Get('scheduler/status')
   @ApiOperation({
-    summary: 'Get cron scheduler status',
+    summary: 'Get automatic job scheduler status and statistics',
     description:
-      'Returns the current status of the automatic job processing scheduler',
+      'Returns the current operational status of the cron-based job scheduler that automatically processes email jobs every 5 minutes. Provides information about the last processing run, total jobs processed, success rates, and current scheduler state. Critical for monitoring the health of the automated email delivery system.',
   })
   @ApiResponse({
     status: 200,
@@ -139,9 +144,9 @@ export class JobsController {
 
   @Post('scheduler/force')
   @ApiOperation({
-    summary: 'Force manual job processing',
+    summary: 'Force immediate job processing outside schedule',
     description:
-      'Manually triggers job processing outside of the scheduled cron cycle',
+      'Bypasses the normal 5-minute cron schedule and immediately triggers job processing. Useful for urgent email deliveries or testing scenarios. Will not execute if automatic processing is already running to prevent conflicts. Returns processing statistics and prevents overlapping job executions.',
   })
   @ApiResponse({
     status: 200,
@@ -160,8 +165,9 @@ export class JobsController {
 
   @Get('bulk-upload')
   @ApiOperation({
-    summary: 'Get user bulk upload jobs',
-    description: 'Returns all bulk upload jobs for the authenticated user',
+    summary: 'Get all bulk upload jobs for current user',
+    description:
+      "Retrieves all bulk upload jobs created by the authenticated user including their processing status, file information, record counts, error details, and processing timestamps. Provides complete visibility into the user's file upload history and processing results. Essential for tracking bulk import operations.",
   })
   @ApiResponse({
     status: 200,
@@ -169,13 +175,15 @@ export class JobsController {
     type: [BulkUploadJob],
   })
   async findUserBulkUploadJobs(@Request() req: any): Promise<BulkUploadJob[]> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     return this.bulkUploadJobsService.findByUser(Number(req.user.id));
   }
 
   @Get('bulk-upload/completed')
   @ApiOperation({
-    summary: 'Get completed bulk upload jobs',
-    description: 'Returns all completed or failed bulk upload jobs',
+    summary: 'Get all completed and failed bulk upload jobs',
+    description:
+      'Retrieves all bulk upload jobs that have finished processing, whether successfully or with failures. Includes detailed statistics about records processed, success counts, error details, and processing times. Useful for administrative oversight and troubleshooting bulk import operations across all users.',
   })
   @ApiResponse({
     status: 200,
@@ -188,8 +196,9 @@ export class JobsController {
 
   @Get('bulk-upload/:id')
   @ApiOperation({
-    summary: 'Get bulk upload job by ID',
-    description: 'Returns details of a specific bulk upload job',
+    summary: 'Get detailed information for a specific bulk upload job',
+    description:
+      'Retrieves complete details for a specific bulk upload job including processing status, file information, record statistics, detailed error information, processing timestamps, and associated user data. Essential for monitoring individual bulk import operations and debugging processing issues.',
   })
   @ApiParam({
     name: 'id',

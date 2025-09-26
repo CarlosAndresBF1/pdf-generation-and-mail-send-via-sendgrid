@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Job, JobStatus } from '../entities/job.entity';
+import { GeneratedCertificate } from '../../generated-certificates/entities/generated-certificate.entity';
 import { EmailService } from '../../shared/services/email.service';
 import { ConfigService } from '@nestjs/config';
 
@@ -10,6 +11,8 @@ export class JobsService {
   constructor(
     @InjectRepository(Job)
     private readonly jobRepository: Repository<Job>,
+    @InjectRepository(GeneratedCertificate)
+    private readonly generatedCertificateRepository: Repository<GeneratedCertificate>,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
   ) {}
@@ -65,7 +68,7 @@ export class JobsService {
       // Prepare email data
       const downloadLink = `${this.configService.get<string>('APP_URL') || 'http://localhost:3000'}/certificate/${generatedCertificate.id}/download`;
 
-      // Send email
+      // Send email with custom sender from certificate
       await this.emailService.sendCertificateEmail(
         attendee.email,
         attendee.fullName,
@@ -76,13 +79,20 @@ export class JobsService {
         certificate.sendgridTemplateId,
         pdfBuffer,
         `${attendee.fullName.replace(/[^a-zA-Z0-9]/g, '_')}_certificate.pdf`,
+        certificate.senderEmail, // Custom sender email from certificate
+        certificate.emailSubject, // Custom subject from certificate
+        certificate.senderFromName, // Custom sender name from certificate
       );
 
       // Update job status
       job.status = JobStatus.SENT;
       generatedCertificate.isSent = true;
 
-      await this.jobRepository.save(job);
+      // Save both job and generated certificate
+      await Promise.all([
+        this.jobRepository.save(job),
+        this.generatedCertificateRepository.save(generatedCertificate),
+      ]);
       console.log(
         `Email sent successfully for certificate ${generatedCertificate.id}`,
       );

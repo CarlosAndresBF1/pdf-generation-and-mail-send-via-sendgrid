@@ -144,10 +144,53 @@ export class GeneratedCertificatesService {
     return results;
   }
 
-  async sendCertificateEmails(ids: number[]): Promise<void> {
+  async sendCertificateEmails(ids: number[]): Promise<{
+    success: boolean;
+    data: {
+      jobsCreated: number;
+      jobsSkipped: number;
+      totalRequested: number;
+    };
+    message: string;
+  }> {
+    let jobsCreated = 0;
+    let jobsSkipped = 0;
+
     for (const id of ids) {
+      // Check if certificate exists
+      const certificate = await this.generatedCertificateRepository.findOne({
+        where: { id },
+      });
+
+      if (!certificate) {
+        jobsSkipped++;
+        continue;
+      }
+
+      // Check if job already exists for this certificate
+      const existingJob = await this.jobRepository.findOne({
+        where: { generatedCertificateId: id },
+      });
+
+      if (existingJob) {
+        jobsSkipped++;
+        continue;
+      }
+
+      // Create new job
       await this.createEmailJob(id);
+      jobsCreated++;
     }
+
+    return {
+      success: true,
+      data: {
+        jobsCreated,
+        jobsSkipped,
+        totalRequested: ids.length,
+      },
+      message: `Email jobs processed: ${jobsCreated} created, ${jobsSkipped} skipped`,
+    };
   }
 
   private async createEmailJob(generatedCertificateId: number): Promise<Job> {
@@ -182,5 +225,52 @@ export class GeneratedCertificatesService {
     return await this.pdfGeneratorService.generateCertificatePdf(
       certificateData,
     );
+  }
+
+  async processPendingCertificates(): Promise<{
+    success: boolean;
+    data: {
+      totalCertificates: number;
+      jobsCreated: number;
+      alreadyProcessed: number;
+    };
+    message: string;
+  }> {
+    // Get all generated certificates that don't have an associated job
+    const certificatesWithoutJobs = await this.generatedCertificateRepository
+      .createQueryBuilder('gc')
+      .leftJoin('jobs', 'j', 'j.generated_certificate_id = gc.id')
+      .where('j.id IS NULL')
+      .getMany();
+
+    let jobsCreated = 0;
+    let alreadyProcessed = 0;
+
+    // Create jobs for certificates without jobs
+    for (const certificate of certificatesWithoutJobs) {
+      // Double-check that no job exists (race condition protection)
+      const existingJob = await this.jobRepository.findOne({
+        where: { generatedCertificateId: certificate.id },
+      });
+
+      if (existingJob) {
+        alreadyProcessed++;
+        continue;
+      }
+
+      // Create new job
+      await this.createEmailJob(certificate.id);
+      jobsCreated++;
+    }
+
+    return {
+      success: true,
+      data: {
+        totalCertificates: certificatesWithoutJobs.length,
+        jobsCreated,
+        alreadyProcessed,
+      },
+      message: `Processed pending certificates: ${jobsCreated} jobs created, ${alreadyProcessed} already had jobs`,
+    };
   }
 }

@@ -44,8 +44,9 @@ export class AttendeesController {
 
   @Post()
   @ApiOperation({
-    summary: 'Create a new attendee',
-    description: 'Creates a new event attendee',
+    summary: 'Create a new event attendee record',
+    description:
+      'Creates a new attendee record in the system with complete personal information including full name, email, country, document details, and gender. Validates all required fields and ensures email uniqueness. The created attendee can then be used for certificate generation and event participation tracking.',
   })
   @ApiBody({
     type: CreateAttendeeDto,
@@ -65,8 +66,9 @@ export class AttendeesController {
 
   @Post('bulk')
   @ApiOperation({
-    summary: 'Create multiple attendees',
-    description: 'Creates multiple event attendees in bulk',
+    summary: 'Create multiple attendees in a single operation',
+    description:
+      'Creates multiple attendee records simultaneously from an array of attendee data. Validates each record individually and provides detailed feedback about successful creations and validation errors. More efficient than creating attendees one by one, with transaction support to ensure data consistency.',
   })
   @ApiBody({
     type: [CreateAttendeeDto],
@@ -86,8 +88,9 @@ export class AttendeesController {
 
   @Get()
   @ApiOperation({
-    summary: 'Get all attendees',
-    description: 'Retrieves all event attendees',
+    summary: 'List all attendees in the system',
+    description:
+      'Retrieves a complete list of all registered attendees with their full personal information including names, emails, countries, document details, and registration timestamps. Useful for administrative overview, reporting, and selecting attendees for certificate generation.',
   })
   @ApiResponse({
     status: 200,
@@ -153,9 +156,9 @@ export class AttendeesController {
   @Post('bulk-upload')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({
-    summary: 'Create bulk upload job',
+    summary: 'Upload CSV/Excel file for asynchronous attendee processing',
     description:
-      'Creates an asynchronous job to process CSV or Excel file with attendee data and optional certificate association',
+      'Creates an asynchronous job to process CSV or Excel files containing attendee data. Supports multiple column formats in Spanish and English, validates data integrity, handles duplicate detection with smart AND logic (same email AND document number), and provides detailed error reporting per row. The job processes in the background and can handle large files without blocking the API response.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -186,6 +189,7 @@ export class AttendeesController {
   ): Promise<BulkUploadJob> {
     return this.bulkUploadJobsService.createJob(
       file.originalname,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       Number(req.user.id),
       file,
     );
@@ -193,8 +197,9 @@ export class AttendeesController {
 
   @Delete(':id')
   @ApiOperation({
-    summary: 'Delete attendee',
-    description: 'Deletes an existing attendee',
+    summary: 'Delete an attendee record permanently',
+    description:
+      'Permanently removes an attendee from the system including all associated data. This operation cannot be undone and may affect existing generated certificates that reference this attendee. Use with caution as it impacts data integrity and historical records.',
   })
   @ApiParam({
     name: 'id',

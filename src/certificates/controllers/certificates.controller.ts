@@ -45,8 +45,9 @@ export class CertificatesController {
 
   @Post()
   @ApiOperation({
-    summary: 'Create a new certificate configuration',
-    description: 'Creates a new certificate configuration for events',
+    summary: 'Create a new certificate template configuration',
+    description:
+      'Creates a new certificate template configuration with all necessary settings for event certificates including client information, template design, email configuration, SendGrid template association, and custom sender settings. This configuration will be used to generate personalized certificates for attendees.',
   })
   @ApiResponse({
     status: 201,
@@ -62,8 +63,9 @@ export class CertificatesController {
 
   @Get()
   @ApiOperation({
-    summary: 'Get all certificate configurations',
-    description: 'Retrieves all certificate configurations',
+    summary: 'List all certificate template configurations',
+    description:
+      'Retrieves all certificate template configurations in the system including both active and inactive templates. Shows complete configuration details such as client information, design URLs, email settings, SendGrid template IDs, and custom sender configurations. Essential for administrative management of certificate templates.',
   })
   @ApiResponse({
     status: 200,
@@ -75,8 +77,9 @@ export class CertificatesController {
 
   @Get('active')
   @ApiOperation({
-    summary: 'Get active certificate configurations',
-    description: 'Retrieves only active certificate configurations',
+    summary: 'List only active certificate templates',
+    description:
+      'Retrieves only certificate template configurations that are currently active and available for use in certificate generation. Filters out disabled or archived templates. Ideal for dropdown lists and certificate selection interfaces where only usable templates should be displayed.',
   })
   @ApiResponse({
     status: 200,
@@ -89,8 +92,9 @@ export class CertificatesController {
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Get certificate configuration by ID',
-    description: 'Retrieves a specific certificate configuration by ID',
+    summary: 'Get detailed certificate template configuration',
+    description:
+      'Retrieves complete details for a specific certificate template configuration including all settings, design information, email configuration, SendGrid integration details, and custom sender settings. Returns 404 if the template does not exist.',
   })
   @ApiParam({
     name: 'id',
@@ -138,8 +142,9 @@ export class CertificatesController {
 
   @Put(':id/toggle-active')
   @ApiOperation({
-    summary: 'Toggle certificate configuration active status',
-    description: 'Toggles the active status of a certificate configuration',
+    summary: 'Toggle certificate template active status',
+    description:
+      'Switches a certificate template between active and inactive states. Active templates are available for certificate generation while inactive templates are hidden from selection lists. This allows for template lifecycle management without permanent deletion.',
   })
   @ApiParam({
     name: 'id',
@@ -162,9 +167,9 @@ export class CertificatesController {
   @Post('upload-design')
   @UseInterceptors(FileInterceptor('image'))
   @ApiOperation({
-    summary: 'Upload certificate design image',
+    summary: 'Upload background design image for certificates',
     description:
-      'Uploads an image file to S3 for use as certificate background design',
+      'Uploads design images to S3 storage for use as certificate backgrounds. Supports JPEG, PNG, WebP, and SVG formats up to 10MB. Images are automatically organized in S3 with client and year folder structure. Returns the CDN URL for immediate use in certificate templates. Validates image format and size before upload.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -199,9 +204,9 @@ export class CertificatesController {
 
   @Post('test-certificate')
   @ApiOperation({
-    summary: 'Send test certificate',
+    summary: 'Generate and send test certificate for template validation',
     description:
-      'Generates and sends a test certificate via email without storing data in the database',
+      'Creates a temporary certificate using the specified template and sends it via email for testing and validation purposes. Does not store any data in the database or create permanent records. Perfect for testing certificate designs, email templates, and SendGrid configurations before production use. Uses custom sender email and subject from the certificate template.',
   })
   @ApiResponse({
     status: 201,
@@ -226,8 +231,9 @@ export class CertificatesController {
 
   @Delete(':id')
   @ApiOperation({
-    summary: 'Delete certificate configuration',
-    description: 'Deletes an existing certificate configuration',
+    summary: 'Delete certificate template configuration permanently',
+    description:
+      'Permanently removes a certificate template configuration from the system. This operation cannot be undone and will affect any existing generated certificates that reference this template. Use with extreme caution as it impacts system functionality and historical data integrity.',
   })
   @ApiParam({
     name: 'id',
