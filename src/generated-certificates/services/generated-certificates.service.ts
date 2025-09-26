@@ -96,10 +96,10 @@ export class GeneratedCertificatesService {
           documentNumber: attendee.documentNumber || '',
         };
 
-        const pdfBuffer =
-          await this.pdfGeneratorService.generateCertificatePdf(
-            certificateData,
-          );
+        const pdfBuffer = await this.pdfGeneratorService.generateCertificatePdf(
+          certificateData,
+          certificate.pdfTemplate,
+        );
 
         // Upload to S3
         const s3Key = this.s3Service.generateCertificateKey(

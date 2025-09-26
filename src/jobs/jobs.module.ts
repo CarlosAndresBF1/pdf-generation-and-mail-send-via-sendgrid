@@ -12,6 +12,7 @@ import { JobsController } from './controllers/jobs.controller';
 import { FileProcessingService } from '../attendees/services/file-processing.service';
 import { EmailService } from '../shared/services/email.service';
 import { S3Service } from '../shared/services/s3.service';
+import { PdfGeneratorService } from '../shared/services/pdf-generator.service';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { S3Service } from '../shared/services/s3.service';
     FileProcessingService,
     EmailService,
     S3Service,
+    PdfGeneratorService,
   ],
   exports: [JobsService, JobSchedulerService, BulkUploadJobsService],
 })

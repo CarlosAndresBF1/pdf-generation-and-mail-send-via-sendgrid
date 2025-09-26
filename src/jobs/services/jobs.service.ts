@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Job, JobStatus } from '../entities/job.entity';
 import { GeneratedCertificate } from '../../generated-certificates/entities/generated-certificate.entity';
 import { EmailService } from '../../shared/services/email.service';
+import { PdfGeneratorService } from '../../shared/services/pdf-generator.service';
+import { S3Service } from '../../shared/services/s3.service';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -14,8 +16,37 @@ export class JobsService {
     @InjectRepository(GeneratedCertificate)
     private readonly generatedCertificateRepository: Repository<GeneratedCertificate>,
     private readonly emailService: EmailService,
+    private readonly pdfGeneratorService: PdfGeneratorService,
+    private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * Método unificado para generar PDFs de certificados
+   * Utiliza los mismos parámetros tanto para tests como para jobs
+   */
+  private async generateCertificatePdfBuffer(
+    generatedCertificate: GeneratedCertificate,
+  ): Promise<Buffer> {
+    const { certificate, attendee } = generatedCertificate;
+
+    // Crear datos para el PDF con la misma estructura que usa el test
+    const certificateData = {
+      fullName: attendee.fullName,
+      certificateName: certificate.name,
+      eventName: certificate.eventName,
+      baseDesignUrl: certificate.baseDesignUrl,
+      country: attendee.country,
+      documentType: attendee.documentType,
+      documentNumber: attendee.documentNumber,
+    };
+
+    // Generar PDF usando el mismo servicio que el test
+    return await this.pdfGeneratorService.generateCertificatePdf(
+      certificateData,
+      certificate.pdfTemplate,
+    );
+  }
 
   async processPendingJobs(): Promise<{
     processed: number;
@@ -61,9 +92,27 @@ export class JobsService {
       const { generatedCertificate } = job;
       const { certificate, attendee } = generatedCertificate;
 
-      // For now, we'll generate a fresh PDF instead of downloading from S3
-      // In production, you might want to download from S3 or cache the buffer
-      const pdfBuffer = Buffer.from('PDF content would be here'); // Placeholder
+      // Generar PDF usando el método unificado
+      const pdfBuffer =
+        await this.generateCertificatePdfBuffer(generatedCertificate);
+
+      // Subir PDF a S3 usando la misma lógica que el proceso inicial
+      const s3Key = this.s3Service.generateCertificateKey(
+        certificate.client,
+        new Date().getFullYear(),
+        certificate.id,
+        certificate.name,
+        attendee.fullName,
+      );
+
+      const s3Url = await this.s3Service.uploadFile(
+        s3Key,
+        pdfBuffer,
+        'application/pdf',
+      );
+
+      // Actualizar la URL de S3 en el certificado generado
+      generatedCertificate.s3Url = s3Url;
 
       // Prepare email data
       const downloadLink = `${this.configService.get<string>('APP_URL') || 'http://localhost:3000'}/certificate/${generatedCertificate.id}/download`;
@@ -167,7 +216,7 @@ export class JobsService {
     return job;
   }
 
-  async retryJob(id: number): Promise<Job> {
+  async retryJob(id: number): Promise<{ message: string }> {
     const job = await this.findOne(id);
 
     // Reset job status to pending
@@ -175,7 +224,11 @@ export class JobsService {
     job.errorMessage = undefined;
     job.attemptedAt = undefined;
 
-    return await this.jobRepository.save(job);
+    await this.jobRepository.save(job);
+
+    return {
+      message: `Job ${id} has been reset to pending status for retry`,
+    };
   }
 
   async retryFailedJobs(): Promise<void> {

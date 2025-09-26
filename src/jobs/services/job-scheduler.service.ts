@@ -13,7 +13,7 @@ export class JobSchedulerService {
    * Cron job que se ejecuta cada 5 minutos para procesar jobs pendientes
    * Incluye lógica para prevenir ejecuciones concurrentes
    */
-  @Cron(CronExpression.EVERY_5_MINUTES, {
+  @Cron(CronExpression.EVERY_MINUTE, {
     name: 'processEmailJobs',
     timeZone: 'America/Bogota', // Ajusta según tu zona horaria
   })
