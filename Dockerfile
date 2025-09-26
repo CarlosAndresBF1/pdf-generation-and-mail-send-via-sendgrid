@@ -70,7 +70,6 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/src/certificates/templates ./src/certificates/templates
-COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
 
 # Change to non-root user
 USER nestjs
@@ -82,5 +81,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node --version || exit 1
 
-# Start the application with Puppeteer verification
-CMD ["./scripts/docker-start.sh"]
+# Start the application
+CMD ["node", "dist/main"]
