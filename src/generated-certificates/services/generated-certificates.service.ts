@@ -103,8 +103,12 @@ export class GeneratedCertificatesService {
             certificateData,
             certificate.pdfTemplate,
           );
-        } catch () {
+        } catch (error) {
           // Skip this attendee - don't create DB record or job if PDF fails
+          console.error(
+            `Error generating PDF for attendee ${attendee.id}:`,
+            error,
+          );
           continue;
         }
 

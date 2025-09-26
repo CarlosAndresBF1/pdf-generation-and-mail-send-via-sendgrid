@@ -10,6 +10,7 @@ import { CertificatesModule } from './certificates/modules/certificates.module';
 import { AttendeesModule } from './attendees/modules/attendees.module';
 import { GeneratedCertificatesModule } from './generated-certificates/generated-certificates.module';
 import { JobsModule } from './jobs/jobs.module';
+import { ReportsModule } from './reports/modules/reports.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { JobsModule } from './jobs/jobs.module';
     AttendeesModule,
     GeneratedCertificatesModule,
     JobsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
