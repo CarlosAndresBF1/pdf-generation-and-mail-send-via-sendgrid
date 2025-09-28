@@ -56,18 +56,13 @@ scripts
 
 # Config files not needed at runtime
 .prettierrc
-.eslintrc*
-eslint.config.*
-jest.config.js
-tsconfig.json
-tsconfig.build.json
-nest-cli.json
+.eslintrc* 
 
-# Test files
-test
-**/__tests__/**
-**/*.test.ts
-**/*.spec.ts
+# Test files (commented out for production builds that run tests)
+# test
+# **/__tests__/**
+# **/*.test.ts
+# **/*.spec.ts
 
 # Backup files
 *.ts.backup*

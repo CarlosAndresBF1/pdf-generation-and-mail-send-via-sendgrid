@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3669:3000"
+      - "${EXTERNAL_PORT:-3000}:3000" # API principal (usa EXTERNAL_PORT del .env, default 3000)
     environment:
       - NODE_ENV=production
       - PORT=3000

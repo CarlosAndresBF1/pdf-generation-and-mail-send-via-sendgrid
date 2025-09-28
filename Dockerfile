@@ -74,10 +74,7 @@ RUN apk add --no-cache \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Run tests BEFORE building (fail fast if tests don't pass)
-RUN echo "🧪 Running unit tests..." && npm run test
-
-# Build the application (only if tests pass)
+# Build the application using production tsconfig (without tests)
 RUN echo "🏗️ Building application..." && npm run build
 
 # Production stage

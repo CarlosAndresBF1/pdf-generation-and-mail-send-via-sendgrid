@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { UsersService } from 'src/users/services/users.service';
+import { UsersService } from '../../users/services/users.service';
 import { DataSource } from 'typeorm';
 import {
   JwtPayload,

@@ -33,7 +33,7 @@ services:
 
     # Puertos expuestos
     ports:
-      - "3000:3000" # API principal
+      - "${EXTERNAL_PORT:-3000}:3000" # API principal (usa EXTERNAL_PORT del .env.development, default 3000)
       - "9229:9229" # Node.js debugging
       - "9230:9230" # Inspector adicional si se necesita
 
