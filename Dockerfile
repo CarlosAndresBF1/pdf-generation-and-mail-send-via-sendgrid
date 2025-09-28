@@ -49,6 +49,8 @@ CMD ["npm", "run", "start:debug"]
 # Build stage
 FROM node:22-alpine AS builder
 
+RUN echo "RUNNING BUILD STAGE"
+
 WORKDIR /app
 
 # Copy package files
@@ -74,11 +76,16 @@ RUN apk add --no-cache \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Build the application using production tsconfig (without tests)
-RUN echo "🏗️ Building application..." && npm run build
+# Run linting, tests, and build the application
+RUN echo "🔍 Running lint..." && npm run lint && \
+    echo "🧪 Running unit tests..." && npm run test && \
+    echo "🚀 Running e2e tests..." && npm run test:e2e && \
+    echo "🏗️ Building application..." && npm run build
 
 # Production stage
 FROM node:22-alpine AS production
+
+RUN echo "RUNNING PRODUCTION STAGE"
 
 # Install Chrome dependencies for Puppeteer (for PDF generation in production)
 RUN apk add --no-cache \
