@@ -25,7 +25,6 @@ import {
 import { AttendeesService } from '../services/attendees.service';
 import { CreateAttendeeDto } from '../dto/create-attendee.dto';
 import { UpdateAttendeeDto } from '../dto/update-attendee.dto';
-import { BulkUploadResponseDto } from '../dto/bulk-upload-attendee.dto';
 import { FileProcessingService } from '../services/file-processing.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { BulkUploadJobsService } from '../../jobs/services/bulk-upload-jobs.service';

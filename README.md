@@ -28,6 +28,8 @@ npm run dev:down        # Parar y remover contenedor
 npm run dev:restart     # Reiniciar solo la aplicación
 npm run dev:rebuild     # Rebuild imagen y levantar
 npm run dev:clean       # Limpiar todo (contenedores, volúmenes)
+npm run dev:logs       # Logs para el hot reloader
+npm run dev:status
 ```
 
 ### 🔍 Debugging y Logs

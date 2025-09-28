@@ -6,6 +6,11 @@ dotenv.config();
 
 const configService = new ConfigService();
 
+console.log('Database Config:', {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  host: configService.get('DB_HOST'),
+});
+
 export const AppDataSource = new DataSource({
   type: 'mysql',
   host: configService.get('DB_HOST'),

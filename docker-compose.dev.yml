@@ -12,8 +12,6 @@ services:
     volumes:
       # Código fuente - hot reload
       - .:/app:cached
-      # Preservar node_modules del contenedor (mejor performance)
-      - /app/node_modules
       # Persistir historial de comandos
       - dev-bash-history:/home/nestjs/.bash_history
       - dev-zsh-history:/home/nestjs/.zsh_history

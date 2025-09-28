@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as puppeteer from 'puppeteer';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -22,6 +23,8 @@ export class PdfGeneratorService {
     'templates',
   );
 
+  constructor(private readonly configService: ConfigService) {}
+
   async generateCertificatePdf(
     certificateData: CertificateData,
     templateName = 'default',
@@ -44,9 +47,14 @@ export class PdfGeneratorService {
     );
 
     // Generate PDF using Puppeteer with Docker Alpine optimized settings
+    const puppeteerExecutablePath = this.configService.get<string>(
+      'PUPPETEER_EXECUTABLE_PATH',
+    );
+    const puppeteerArgs = this.configService.get<string>('PUPPETEER_ARGS');
+
     const browser = await puppeteer.launch({
       headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      executablePath: puppeteerExecutablePath || undefined,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -70,9 +78,7 @@ export class PdfGeneratorService {
         '--disable-sync',
         '--disable-background-networking',
         '--disable-software-rasterizer',
-        ...(process.env.PUPPETEER_ARGS
-          ? process.env.PUPPETEER_ARGS.split(' ')
-          : []),
+        ...(puppeteerArgs ? puppeteerArgs.split(' ') : []),
       ],
       timeout: 30000, // 30 seconds timeout for browser launch
     });

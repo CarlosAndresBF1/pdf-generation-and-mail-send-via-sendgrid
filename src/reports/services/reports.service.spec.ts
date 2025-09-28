@@ -123,6 +123,7 @@ describe('ReportsService', () => {
       const result = await service.generateCertificateReport(1);
 
       expect(result).toBeInstanceOf(Buffer);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(generatedCertificateRepository.find).toHaveBeenCalledWith({
         where: { certificateId: 1 },
         relations: ['certificate', 'attendee'],
