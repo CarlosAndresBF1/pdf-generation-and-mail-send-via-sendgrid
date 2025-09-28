@@ -1,3 +1,51 @@
+
+# Development stage - optimized for hot reload and debugging
+FROM node:22-alpine AS development
+
+WORKDIR /app
+
+# Install Chrome dependencies for Puppeteer + sudo for dev containers
+RUN apk add --no-cache \
+    ca-certificates \
+    chromium \
+    curl \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    nss \
+    sudo \
+    ttf-freefont
+
+# Tell Puppeteer to skip installing Chrome. We'll be using the installed package.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Create non-root user and configure sudo
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001 -G nodejs && \
+    echo "nestjs ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Copy package files
+COPY --chown=nestjs:nodejs package*.json ./
+
+# Install ALL dependencies (including dev dependencies for development)
+RUN npm ci
+
+# Copy source code (will be overridden by volume in dev)
+COPY --chown=nestjs:nodejs . .
+
+# Ensure nestjs owns the entire /app directory
+RUN chown -R nestjs:nodejs /app
+
+# Change to non-root user
+USER nestjs
+
+# Expose ports (app + debugger)
+EXPOSE 3000 9229
+
+# Development command with hot reload and debugging enabled
+CMD ["npm", "run", "start:debug"]
+
 # Build stage
 FROM node:22-alpine AS builder
 
@@ -14,12 +62,12 @@ COPY . .
 
 # Install Chrome dependencies for testing (needed for Puppeteer tests)
 RUN apk add --no-cache \
+    ca-certificates \
     chromium \
-    nss \
     freetype \
     freetype-dev \
     harfbuzz \
-    ca-certificates \
+    nss \
     ttf-freefont
 
 # Tell Puppeteer to skip installing Chrome. We'll be using the installed package.
@@ -37,15 +85,15 @@ FROM node:22-alpine AS production
 
 # Install Chrome dependencies for Puppeteer (for PDF generation in production)
 RUN apk add --no-cache \
+    ca-certificates \
     chromium \
-    nss \
     freetype \
     freetype-dev \
     harfbuzz \
-    ca-certificates \
+    nss \
     ttf-freefont \
-    udev \
     ttf-opensans \
+    udev \
     wqy-zenhei
 
 # Tell Puppeteer to skip installing Chrome. We'll be using the installed package.

@@ -23,7 +23,16 @@
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
-    "clean:install": "rm -rf node_modules package-lock.json && npm cache clean --force && npm install --legacy-peer-deps"
+    "clean:install": "rm -rf node_modules package-lock.json && npm cache clean --force && npm install --legacy-peer-deps",
+    "docker:dev": "docker build --target development -t certification-mails-dev .",
+    "docker:prod": "docker build --target production -t certification-mails-prod .",
+    "dev:up": "docker-compose -f docker-compose.dev.yml up -d",
+    "dev:down": "docker-compose -f docker-compose.dev.yml down",
+    "dev:logs": "docker-compose -f docker-compose.dev.yml logs -f",
+    "dev:rebuild": "docker-compose -f docker-compose.dev.yml up --build -d",
+    "dev:shell": "docker-compose -f docker-compose.dev.yml exec app sh",
+    "dev:restart": "docker-compose -f docker-compose.dev.yml restart app",
+    "dev:clean": "docker-compose -f docker-compose.dev.yml down -v --remove-orphans"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.800.0",

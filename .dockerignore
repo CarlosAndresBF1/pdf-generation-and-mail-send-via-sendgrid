@@ -1,21 +1,76 @@
+# Dependencies
 node_modules
-npm-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
 dist
-.git
-.gitignore
-README.md
-.env.example
-.nyc_output
+build
 coverage
-.nyc_output
-.vscode
-.DS_Store
+*.tsbuildinfo
+
+# Logs
+logs
 *.log
-.env.local
+
+# dotenv environment variables files
+.env
+.env.development
 .env.development.local
 .env.test.local
 .env.production.local
+.env.local
+.env.example
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+docker-compose*.yml
+
+# Dev containers
+.devcontainer
+
+# Documentation
+README.md
+*.md
+.github
+
+# Scripts
+scripts
+
+# Config files not needed at runtime
+.prettierrc
+.eslintrc*
+eslint.config.*
 jest.config.js
-/.github/instructions/
+tsconfig.json
+tsconfig.build.json
+nest-cli.json
+
+# Test files
+test
+**/__tests__/**
+**/*.test.ts
+**/*.spec.ts
+
+# Backup files
 *.ts.backup*
+
+# Project specific
 /IA_context

@@ -1,0 +1,78 @@
+# Docker Compose para Desarrollo - Con Hot Reload y Debugging
+services:
+  # Aplicación principal NestJS
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: certificate-api-dev
+
+    # Volúmenes para hot reload y persistencia
+    volumes:
+      # Código fuente - hot reload
+      - .:/app:cached
+      # Preservar node_modules del contenedor (mejor performance)
+      - /app/node_modules
+      # Persistir historial de comandos
+      - dev-bash-history:/home/nestjs/.bash_history
+      - dev-zsh-history:/home/nestjs/.zsh_history
+      # Caché de npm para builds más rápidos
+      - dev-npm-cache:/home/nestjs/.npm
+
+    # Variables de entorno para desarrollo
+    environment:
+      - NODE_ENV=development
+      - DEBUG=*
+      - CHOKIDAR_USEPOLLING=true # Para hot reload en macOS/Windows
+      - WATCHPACK_POLLING=true # Webpack watch en containers
+
+    # Cargar variables desde archivo .env.development
+    env_file:
+      - .env.development
+
+    # Puertos expuestos
+    ports:
+      - "3000:3000" # API principal
+      - "9229:9229" # Node.js debugging
+      - "9230:9230" # Inspector adicional si se necesita
+
+    # Healthcheck para monitorear la app (usando curl que está disponible)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Reiniciar automáticamente si falla
+    restart: unless-stopped
+
+    # Comando de desarrollo con hot reload y debug
+    command: ["sh", "-c", "npm install && npx nest start --debug --watch"]
+
+    # Directorio de trabajo
+    working_dir: /app
+
+    # Usuario no-root para seguridad
+    user: nestjs
+
+    # Dependencias (si agregamos otros servicios)
+    # depends_on:
+    #   - redis
+    #   - mysql
+
+# Volúmenes nombrados para persistencia
+volumes:
+  dev-bash-history:
+    driver: local
+  dev-zsh-history:
+    driver: local
+  dev-npm-cache:
+    driver: local
+
+# Red personalizada para desarrollo
+networks:
+  default:
+    name: certificate-dev-network
+    driver: bridge

@@ -21,6 +21,23 @@
   <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
+  ### 🔧 Comandos Principales
+```bash
+npm run dev:up          # Levantar contenedor de desarrollo
+npm run dev:down        # Parar y remover contenedor
+npm run dev:restart     # Reiniciar solo la aplicación
+npm run dev:rebuild     # Rebuild imagen y levantar
+npm run dev:clean       # Limpiar todo (contenedores, volúmenes)
+```
+
+### 🔍 Debugging y Logs
+```bash
+npm run dev:logs        # Ver logs en tiempo real
+npm run dev:shell       # Acceder al shell del contenedor
+docker-compose -f docker-compose.dev.yml ps  # Estado de contenedores
+```
+
+
 ## Description
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
@@ -30,6 +47,8 @@
 ```bash
 $ npm install
 ```
+
+
 
 ## Compile and run the project
 
