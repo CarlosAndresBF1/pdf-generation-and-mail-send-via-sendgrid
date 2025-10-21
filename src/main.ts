@@ -33,7 +33,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Certificate Generation API')
     .setDescription('API for generating and managing certificates')
-    .setVersion('2.1.3')
+    .setVersion('2.2.0')
     .addBearerAuth(
       {
         type: 'http',
