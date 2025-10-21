@@ -61,6 +61,7 @@ export class JobsController {
     return this.jobsService.findPendingJobs();
   }
 
+  /*
   @Post('process-pending')
   @ApiOperation({
     summary: 'Manually trigger processing of pending email jobs',
@@ -122,6 +123,7 @@ export class JobsController {
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.jobsService.findOne(id);
   }
+  */
 
   @Get('scheduler/status')
   @ApiOperation({
@@ -144,6 +146,7 @@ export class JobsController {
     return this.jobSchedulerService.getSchedulerStatus();
   }
 
+  /*
   @Post('scheduler/force')
   @ApiOperation({
     summary: 'Force immediate job processing outside schedule',
@@ -222,7 +225,7 @@ export class JobsController {
   ): Promise<BulkUploadJob> {
     return this.bulkUploadJobsService.findOne(id);
   }
-
+*/
   // Audit and Repair Endpoints
 
   @Get('audit/missing-pdfs')

@@ -115,6 +115,18 @@ export class CreateCertificateDto {
   emailSubject?: string;
 
   @ApiProperty({
+    description:
+      'BCC email address to receive a copy of all certificate emails',
+    example: 'admin@company.com',
+    maxLength: 255,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  ccEmail?: string;
+
+  @ApiProperty({
     description: 'Whether the certificate is active',
     example: true,
     default: true,

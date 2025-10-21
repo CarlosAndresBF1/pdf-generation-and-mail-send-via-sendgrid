@@ -19,6 +19,7 @@ export interface EmailData {
   templateId: string;
   subject?: string;
   dynamicTemplateData: Record<string, any>;
+  bcc?: string;
   attachments?: Array<{
     content: string; // base64 encoded
     filename: string;
@@ -72,7 +73,7 @@ export class EmailService {
     customFromEmail?: string,
     customFromName?: string,
   ): Promise<void> {
-    const msg = {
+    const msg: any = {
       to: emailData.to,
       from: this.getFromObject(customFromEmail, customFromName),
       templateId: emailData.templateId,
@@ -80,6 +81,10 @@ export class EmailService {
       dynamicTemplateData: emailData.dynamicTemplateData,
       attachments: emailData.attachments,
     };
+
+    if (emailData.bcc) {
+      msg.bcc = emailData.bcc;
+    }
 
     try {
       await sgMail.send(msg);
@@ -105,18 +110,17 @@ export class EmailService {
     customFromEmail?: string,
     customSubject?: string,
     customFromName?: string,
+    additionalData?: Record<string, any>,
+    bccEmail?: string,
   ): Promise<void> {
     const emailData: EmailData = {
       to: recipientEmail,
       templateId,
       subject: customSubject,
       dynamicTemplateData: {
-        recipient_name: recipientName,
-        certificate_name: certificateName,
-        event_name: eventName,
-        event_link: eventLink,
-        download_link: downloadLink,
+        ...additionalData, // Include any additional custom fields
       },
+      bcc: bccEmail,
       attachments: [
         {
           content: pdfBuffer.toString('base64'),
@@ -125,6 +129,26 @@ export class EmailService {
           disposition: 'attachment',
         },
       ],
+    };
+
+    await this.sendEmail(emailData, customFromEmail, customFromName);
+  }
+
+  async sendEmailWithoutAttachment(
+    recipientEmail: string,
+    templateId: string,
+    dynamicTemplateData: Record<string, any>,
+    customFromEmail?: string,
+    customSubject?: string,
+    customFromName?: string,
+    bccEmail?: string,
+  ): Promise<void> {
+    const emailData: EmailData = {
+      to: recipientEmail,
+      templateId,
+      subject: customSubject,
+      dynamicTemplateData,
+      bcc: bccEmail,
     };
 
     await this.sendEmail(emailData, customFromEmail, customFromName);

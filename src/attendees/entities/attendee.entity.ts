@@ -36,6 +36,18 @@ export class Attendee {
   @Column({ length: 255 })
   email: string;
 
+  @Column({ name: 'link_1', length: 255, nullable: true })
+  link1?: string;
+
+  @Column({ name: 'link_2', length: 255, nullable: true })
+  link2?: string;
+
+  @Column({ name: 'custom_1', length: 255, nullable: true })
+  custom1?: string;
+
+  @Column({ name: 'custom_2', length: 255, nullable: true })
+  custom2?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

@@ -76,6 +76,38 @@ export class BulkUploadAttendeeDto {
   email: string;
 
   @ApiPropertyOptional({
+    description: 'Enlace personalizado 1 (opcional)',
+    example: 'https://example.com/resource1',
+  })
+  @IsOptional()
+  @IsString()
+  link1?: string;
+
+  @ApiPropertyOptional({
+    description: 'Enlace personalizado 2 (opcional)',
+    example: 'https://example.com/resource2',
+  })
+  @IsOptional()
+  @IsString()
+  link2?: string;
+
+  @ApiPropertyOptional({
+    description: 'Campo personalizado 1 (opcional)',
+    example: 'Custom value 1',
+  })
+  @IsOptional()
+  @IsString()
+  custom1?: string;
+
+  @ApiPropertyOptional({
+    description: 'Campo personalizado 2 (opcional)',
+    example: 'Custom value 2',
+  })
+  @IsOptional()
+  @IsString()
+  custom2?: string;
+
+  @ApiPropertyOptional({
     description: 'ID del certificado a asociar con el asistente (opcional)',
     example: 1,
   })

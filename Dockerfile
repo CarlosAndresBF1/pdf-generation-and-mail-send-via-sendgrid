@@ -29,7 +29,7 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY --chown=nestjs:nodejs package*.json ./
 
 # Install ALL dependencies (including dev dependencies for development)
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source code (will be overridden by volume in dev)
 COPY --chown=nestjs:nodejs . .
@@ -57,7 +57,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including dev dependencies for build)
-RUN npm ci && npm cache clean --force
+RUN npm ci --legacy-peer-deps && npm cache clean --force
 
 # Copy source code
 COPY . .
@@ -117,7 +117,7 @@ RUN adduser -S nestjs -u 1001
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production --legacy-peer-deps && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist

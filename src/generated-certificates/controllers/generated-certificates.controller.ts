@@ -30,6 +30,7 @@ export class GeneratedCertificatesController {
     private readonly generatedCertificatesService: GeneratedCertificatesService,
   ) {}
 
+  /*
   @Post('generate')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('jwt-auth')
@@ -187,7 +188,7 @@ export class GeneratedCertificatesController {
   forceProcessPendingCertificates() {
     return this.generatedCertificatesService.processPendingCertificates();
   }
-
+*/
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('jwt-auth')
@@ -230,6 +231,7 @@ export class GeneratedCertificatesController {
     return this.generatedCertificatesService.findOne(id);
   }
 
+  /*
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('jwt-auth')
@@ -255,6 +257,7 @@ export class GeneratedCertificatesController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.generatedCertificatesService.remove(id);
   }
+  */
 }
 
 // Public controller for certificate downloads (no authentication required)

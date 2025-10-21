@@ -40,7 +40,7 @@ export class AttendeesController {
     private readonly fileProcessingService: FileProcessingService,
     private readonly bulkUploadJobsService: BulkUploadJobsService,
   ) {}
-
+  /*
   @Post()
   @ApiOperation({
     summary: 'Create a new event attendee record',
@@ -152,23 +152,80 @@ export class AttendeesController {
     return this.attendeesService.update(id, updateAttendeeDto);
   }
 
+  */
+
   @Post('bulk-upload')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({
     summary: 'Upload CSV/Excel file for asynchronous attendee processing',
-    description:
-      'Creates an asynchronous job to process CSV or Excel files containing attendee data. Supports multiple column formats in Spanish and English, validates data integrity, handles duplicate detection with smart AND logic (same email AND document number), and provides detailed error reporting per row. The job processes in the background and can handle large files without blocking the API response.',
+    description: `Creates an asynchronous job to process CSV or Excel files containing attendee data. 
+    
+**CSV Structure Required:**
+The file must contain a header row with the following columns (order doesn't matter):
+
+**Required Columns:**
+- \`fullName\` - Full name of the attendee (e.g., "Carlos Andres Beltran Franco")
+- \`email\` - Email address (e.g., "carlosandresbeltran89@gmail.com")
+- \`country\` - Country name (e.g., "Colombia")
+- \`documentType\` - Type of document (e.g., "CC", "Passport")
+- \`documentNumber\` - Document number (e.g., "12345678")
+- \`gender\` - Gender (e.g., "M", "F", "Masculino", "Femenino")
+
+**Optional Columns:**
+- \`firstName\` - First name only (e.g., "Carlos Andres")
+- \`lastName\` - Last name only (e.g., "Beltran Franco")
+- \`certificateId\` - ID of certificate to associate (e.g., 6)
+- \`link1\` - Custom link 1 (e.g., "https://example.com/resource1")
+- \`link2\` - Custom link 2 (e.g., "https://example.com/resource2")
+- \`custom1\` - Custom field 1 (any text value)
+- \`custom2\` - Custom field 2 (any text value)
+
+**Example CSV Structure:**
+\`\`\`csv
+fullName,firstName,lastName,email,country,documentType,documentNumber,gender,certificateId,link1,link2,custom1,custom2
+Carlos Andres Beltran Franco,,,carlosandresbeltran89@gmail.com,Colombia,CC,12345678,M,6,https://www.example.com/,,,
+Patricia Daza De Herrera,,,pdaza@inmov.com,Colombia,CC,87654321,F,6,https://www.example.com/,,Custom Value,
+\`\`\`
+
+**SendGrid Template Variables:**
+All attendee data is automatically sent to SendGrid templates. Use these variable names in your email templates:
+
+**Standard Variables:**
+- \`{{recipient_name}}\` or \`{{attendee_name}}\` - Full name of attendee
+- \`{{certificate_name}}\` - Name of the certificate
+- \`{{event_name}}\` - Name of the event
+- \`{{event_link}}\` - URL link to the event
+- \`{{download_link}}\` - URL to download the certificate PDF
+- \`{{country}}\` - Attendee's country
+- \`{{document_type}}\` - Type of document (CC, Passport, etc.)
+- \`{{document_number}}\` - Document identification number
+
+**Custom Variables (if provided in CSV):**
+- \`{{link_1}}\` - Custom link 1 from CSV
+- \`{{link_2}}\` - Custom link 2 from CSV
+- \`{{custom_1}}\` - Custom field 1 from CSV
+- \`{{custom_2}}\` - Custom field 2 from CSV
+
+**Features:**
+- Supports multiple column name formats in Spanish and English
+- Validates data integrity per row
+- Handles duplicate detection (same email AND document number)
+- Provides detailed error reporting per row
+- Processes asynchronously in background for large files
+- All variables available in SendGrid templates regardless of PDF attachment`,
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: 'File upload with attendee data',
+    description: 'File upload with attendee data (CSV or Excel format)',
     schema: {
       type: 'object',
+      required: ['file'],
       properties: {
         file: {
           type: 'string',
           format: 'binary',
-          description: 'CSV or Excel file with attendee data',
+          description:
+            'CSV or Excel (.xlsx, .xls) file with attendee data following the structure described above',
         },
       },
     },
@@ -180,7 +237,8 @@ export class AttendeesController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - invalid file or format',
+    description:
+      'Bad request - invalid file format or missing required columns',
   })
   async bulkUpload(
     @UploadedFile() file: Express.Multer.File,

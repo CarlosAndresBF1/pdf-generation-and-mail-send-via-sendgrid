@@ -92,64 +92,105 @@ export class JobsService {
       const { generatedCertificate } = job;
       const { certificate, attendee } = generatedCertificate;
 
-      let pdfBuffer: Buffer;
-      let s3Url: string;
+      // Check if certificate requires PDF generation
+      const requiresPdf = certificate.baseDesignUrl && certificate.pdfTemplate;
 
-      try {
-        // Generar PDF usando el método unificado
-        pdfBuffer =
-          await this.generateCertificatePdfBuffer(generatedCertificate);
+      let pdfBuffer: Buffer | null = null;
+      let s3Url = generatedCertificate.s3Url || '';
 
-        // Subir PDF a S3 usando la misma lógica que el proceso inicial
-        const s3Key = this.s3Service.generateCertificateKey(
-          certificate.client,
-          new Date().getFullYear(),
-          certificate.id,
-          certificate.name,
-          attendee.fullName,
-        );
+      // Only generate PDF if both baseDesignUrl and pdfTemplate are present
+      if (requiresPdf) {
+        try {
+          // Generar PDF usando el método unificado
+          pdfBuffer =
+            await this.generateCertificatePdfBuffer(generatedCertificate);
 
-        s3Url = await this.s3Service.uploadFile(
-          s3Key,
-          pdfBuffer,
-          'application/pdf',
-        );
+          // Subir PDF a S3 usando la misma lógica que el proceso inicial
+          const s3Key = this.s3Service.generateCertificateKey(
+            certificate.client,
+            new Date().getFullYear(),
+            certificate.id,
+            certificate.name,
+            attendee.fullName,
+          );
 
-        // Actualizar la URL de S3 en el certificado generado
-        generatedCertificate.s3Url = s3Url;
-      } catch (pdfError) {
-        console.error(
-          `❌ PDF generation failed for certificate ${generatedCertificate.id}:`,
-          pdfError,
-        );
+          s3Url = await this.s3Service.uploadFile(
+            s3Key,
+            pdfBuffer,
+            'application/pdf',
+          );
 
-        // Mark job as error specifically for PDF generation failure
-        job.status = JobStatus.ERROR;
-        job.errorMessage = `PDF generation failed: ${pdfError instanceof Error ? pdfError.message : 'Unknown PDF error'}`;
+          // Actualizar la URL de S3 en el certificado generado
+          generatedCertificate.s3Url = s3Url;
+        } catch (pdfError) {
+          console.error(
+            `❌ PDF generation failed for certificate ${generatedCertificate.id}:`,
+            pdfError,
+          );
 
-        await this.jobRepository.save(job);
-        return; // Exit early - do not attempt to send email
+          // Mark job as error specifically for PDF generation failure
+          job.status = JobStatus.ERROR;
+          job.errorMessage = `PDF generation failed: ${pdfError instanceof Error ? pdfError.message : 'Unknown PDF error'}`;
+
+          await this.jobRepository.save(job);
+          return; // Exit early - do not attempt to send email
+        }
       }
 
       try {
         // Prepare email data
         const downloadLink = `${this.configService.get<string>('APP_URL') || 'http://localhost:3000'}/certificate/${generatedCertificate.id}/download`;
 
-        // Send email with custom sender from certificate
-        await this.emailService.sendCertificateEmail(
-          attendee.email,
-          attendee.fullName,
-          certificate.name,
-          certificate.eventName,
-          certificate.eventLink,
-          downloadLink,
-          certificate.sendgridTemplateId,
-          pdfBuffer,
-          `${attendee.fullName.replace(/[^a-zA-Z0-9]/g, '_')}_certificate.pdf`,
-          certificate.senderEmail, // Custom sender email from certificate
-          certificate.emailSubject, // Custom subject from certificate
-          certificate.senderFromName, // Custom sender name from certificate
-        );
+        // Prepare dynamic template data with all attendee fields (snake_case format)
+        const dynamicTemplateData: Record<string, any> = {
+          recipient_name: attendee.fullName,
+          attendee_name: attendee.fullName,
+          certificate_name: certificate.name,
+          event_name: certificate.eventName,
+          event_link: certificate.eventLink,
+          download_link: downloadLink,
+          country: attendee.country,
+          document_type: attendee.documentType,
+          document_number: attendee.documentNumber,
+        };
+
+        // Add custom fields if present
+        if (attendee.link1) dynamicTemplateData.link_1 = attendee.link1;
+        if (attendee.link2) dynamicTemplateData.link_2 = attendee.link2;
+        if (attendee.custom1) dynamicTemplateData.custom_1 = attendee.custom1;
+        if (attendee.custom2) dynamicTemplateData.custom_2 = attendee.custom2;
+
+        // Send email with or without PDF attachment
+        if (requiresPdf && pdfBuffer) {
+          // Send email with PDF attachment
+          await this.emailService.sendCertificateEmail(
+            attendee.email,
+            attendee.fullName,
+            certificate.name,
+            certificate.eventName,
+            certificate.eventLink,
+            downloadLink,
+            certificate.sendgridTemplateId,
+            pdfBuffer,
+            `${attendee.fullName.replace(/[^a-zA-Z0-9]/g, '_')}_certificate.pdf`,
+            certificate.senderEmail, // Custom sender email from certificate
+            certificate.emailSubject, // Custom subject from certificate
+            certificate.senderFromName, // Custom sender name from certificate
+            dynamicTemplateData, // Include custom fields
+            certificate.ccEmail, // BCC email from certificate
+          );
+        } else {
+          // Send email without PDF attachment (only template data)
+          await this.emailService.sendEmailWithoutAttachment(
+            attendee.email,
+            certificate.sendgridTemplateId,
+            dynamicTemplateData,
+            certificate.senderEmail,
+            certificate.emailSubject,
+            certificate.senderFromName,
+            certificate.ccEmail, // BCC email from certificate
+          );
+        }
 
         // Update job status only if email was sent successfully
         job.status = JobStatus.SENT;

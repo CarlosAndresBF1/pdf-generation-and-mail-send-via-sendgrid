@@ -48,6 +48,9 @@ export class Certificate {
   })
   emailSubject: string;
 
+  @Column({ name: 'cc_email', length: 255, nullable: true })
+  ccEmail: string;
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 

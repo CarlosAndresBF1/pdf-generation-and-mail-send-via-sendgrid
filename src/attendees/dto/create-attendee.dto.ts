@@ -88,4 +88,48 @@ export class CreateAttendeeDto {
   @IsEmail()
   @IsNotEmpty()
   email: string;
+
+  @ApiProperty({
+    description: 'Custom link 1 (optional)',
+    example: 'https://example.com/resource1',
+    maxLength: 255,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  link1?: string;
+
+  @ApiProperty({
+    description: 'Custom link 2 (optional)',
+    example: 'https://example.com/resource2',
+    maxLength: 255,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  link2?: string;
+
+  @ApiProperty({
+    description: 'Custom field 1 (optional)',
+    example: 'Custom value 1',
+    maxLength: 255,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  custom1?: string;
+
+  @ApiProperty({
+    description: 'Custom field 2 (optional)',
+    example: 'Custom value 2',
+    maxLength: 255,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  custom2?: string;
 }

@@ -197,6 +197,22 @@ export class FileProcessingService {
       certificateid: 'certificateId',
       'id certificado': 'certificateId',
       id_certificado: 'certificateId',
+      link_1: 'link1',
+      link1: 'link1',
+      'enlace 1': 'link1',
+      enlace_1: 'link1',
+      link_2: 'link2',
+      link2: 'link2',
+      'enlace 2': 'link2',
+      enlace_2: 'link2',
+      custom_1: 'custom1',
+      custom1: 'custom1',
+      'campo personalizado 1': 'custom1',
+      campo_personalizado_1: 'custom1',
+      custom_2: 'custom2',
+      custom2: 'custom2',
+      'campo personalizado 2': 'custom2',
+      campo_personalizado_2: 'custom2',
     };
 
     return columnMap[normalized] || column;
@@ -315,6 +331,10 @@ export class FileProcessingService {
             documentNumber: attendeeDto.documentNumber,
             gender: attendeeDto.gender,
             email: attendeeDto.email,
+            link1: attendeeDto.link1,
+            link2: attendeeDto.link2,
+            custom1: attendeeDto.custom1,
+            custom2: attendeeDto.custom2,
           });
 
           const savedAttendee = await this.attendeeRepository.save(newAttendee);

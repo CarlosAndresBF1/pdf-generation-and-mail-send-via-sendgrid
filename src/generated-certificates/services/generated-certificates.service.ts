@@ -85,55 +85,62 @@ export class GeneratedCertificatesService {
           continue;
         }
 
-        let pdfBuffer: Buffer;
-        let s3Url: string;
+        // Check if certificate requires PDF generation
+        const requiresPdf =
+          certificate.baseDesignUrl && certificate.pdfTemplate;
 
-        try {
-          const certificateData = {
-            fullName: attendee.fullName,
-            certificateName: certificate.name,
-            eventName: certificate.eventName,
-            baseDesignUrl: certificate.baseDesignUrl,
-            country: attendee.country || '',
-            documentType: attendee.documentType || '',
-            documentNumber: attendee.documentNumber || '',
-          };
+        let pdfBuffer: Buffer | null = null;
+        let s3Url = '';
 
-          pdfBuffer = await this.pdfGeneratorService.generateCertificatePdf(
-            certificateData,
-            certificate.pdfTemplate,
-          );
-        } catch (error) {
-          // Skip this attendee - don't create DB record or job if PDF fails
-          console.error(
-            `Error generating PDF for attendee ${attendee.id}:`,
-            error,
-          );
-          continue;
-        }
+        // Only generate PDF if both baseDesignUrl and pdfTemplate are present
+        if (requiresPdf) {
+          try {
+            const certificateData = {
+              fullName: attendee.fullName,
+              certificateName: certificate.name,
+              eventName: certificate.eventName,
+              baseDesignUrl: certificate.baseDesignUrl,
+              country: attendee.country || '',
+              documentType: attendee.documentType || '',
+              documentNumber: attendee.documentNumber || '',
+            };
 
-        try {
-          // Upload to S3
-          const s3Key = this.s3Service.generateCertificateKey(
-            certificate.client,
-            new Date().getFullYear(),
-            certificate.id,
-            certificate.name,
-            attendee.fullName,
-          );
+            pdfBuffer = await this.pdfGeneratorService.generateCertificatePdf(
+              certificateData,
+              certificate.pdfTemplate,
+            );
+          } catch (error) {
+            // Skip this attendee - don't create DB record or job if PDF fails
+            console.error(
+              `Error generating PDF for attendee ${attendee.id}:`,
+              error,
+            );
+            continue;
+          }
 
-          s3Url = await this.s3Service.uploadFile(
-            s3Key,
-            pdfBuffer,
-            'application/pdf',
-          );
-        } catch (s3Error) {
-          console.error(
-            `❌ S3 upload failed for ${attendee.fullName}:`,
-            s3Error,
-          );
-          // Skip this attendee - don't create DB record or job if S3 upload fails
-          continue;
+          try {
+            // Upload to S3
+            const s3Key = this.s3Service.generateCertificateKey(
+              certificate.client,
+              new Date().getFullYear(),
+              certificate.id,
+              certificate.name,
+              attendee.fullName,
+            );
+
+            s3Url = await this.s3Service.uploadFile(
+              s3Key,
+              pdfBuffer,
+              'application/pdf',
+            );
+          } catch (s3Error) {
+            console.error(
+              `❌ S3 upload failed for ${attendee.fullName}:`,
+              s3Error,
+            );
+            // Skip this attendee - don't create DB record or job if S3 upload fails
+            continue;
+          }
         }
 
         try {

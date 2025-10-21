@@ -1,3 +1,3 @@
-fullName,firstName,lastName,email,country,documentType,documentNumber,gender,certificateId
-Carlos Andres Beltran Franco,,,dev@inmov.com,Colombia,CC,12345678,M,1
-Patricia Daza De Herrera,,,pdaza@inmov.com,Colombia,CC,12345678,M,1
+fullName,firstName,lastName,email,country,documentType,documentNumber,gender,certificateId,link1,link2,custom1,custom2
+Carlos Andres Beltran Franco,,,carlosandresbeltran89@gmail.com,Colombia,CC,12345678,M,6,https://www.barnesandnoble.com/,,,
+Patricia Daza De Herrera,,,cbeltran@inmov.com,Colombia,CC,12345678,M,6,https://www.barnesandnoble.com/,,,
