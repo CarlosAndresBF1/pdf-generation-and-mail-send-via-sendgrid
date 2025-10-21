@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 import * as Papa from 'papaparse';
 import { validate } from 'class-validator';
 import { plainToClass } from 'class-transformer';
@@ -55,7 +55,7 @@ export class FileProcessingService {
       if (fileExtension === 'csv') {
         parsedData = await this.parseCSV(file);
       } else {
-        parsedData = this.parseExcel(file);
+        parsedData = await this.parseExcel(file);
       }
     } catch (error) {
       throw new BadRequestException(
@@ -97,31 +97,41 @@ export class FileProcessingService {
   /**
    * Parsea un archivo Excel
    */
-  private parseExcel(file: Express.Multer.File): ParsedFileData {
+  private async parseExcel(file: Express.Multer.File): Promise<ParsedFileData> {
     try {
-      const workbook = XLSX.read(file.buffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
+      const workbook = new ExcelJS.Workbook();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      await workbook.xlsx.load(file.buffer as any);
 
-      // Convertir a JSON con headers
-      const jsonData: unknown[][] = XLSX.utils.sheet_to_json(worksheet, {
-        header: 1,
-        defval: '',
+      const worksheet = workbook.worksheets[0];
+
+      if (!worksheet) {
+        throw new Error('El archivo Excel no contiene hojas de trabajo');
+      }
+
+      // Obtener todas las filas
+      const rows: unknown[][] = [];
+      worksheet.eachRow((row) => {
+        const rowValues: unknown[] = [];
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          rowValues.push(cell.value);
+        });
+        rows.push(rowValues);
       });
 
-      if (jsonData.length < 2) {
+      if (rows.length < 2) {
         throw new Error(
           'El archivo debe contener al menos una fila de datos además del header',
         );
       }
 
       // Primera fila son los headers
-      const headers = (jsonData[0] as string[]).map((header: string) =>
-        this.normalizeColumnName(header),
+      const headers = (rows[0] as string[]).map((header: string) =>
+        this.normalizeColumnName(String(header || '')),
       );
 
       // Convertir datos a objetos
-      const data = jsonData.slice(1).map((row) => {
+      const data = rows.slice(1).map((row) => {
         const obj: Record<string, string> = {};
         headers.forEach((header, index) => {
           const value = row[index];
